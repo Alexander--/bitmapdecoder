@@ -1,0 +1,27 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 33
+    buildToolsVersion '33.0.1'
+    defaultConfig {
+        applicationId 'org.bitmapdecoder.demo'
+        minSdkVersion 21
+        targetSdkVersion 33
+        versionCode 1
+        versionName '1.0'
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        signingConfig signingConfigs.debug
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+}
+
+dependencies {
+    api project(':library')
+    api 'org.jetbrains:annotations:20.1.0'
+
+    testImplementation 'junit:junit:4.12'
+}

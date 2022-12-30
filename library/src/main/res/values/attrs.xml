@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="PngImageView">
+        <attr name="src" format="reference"/>
+    </declare-styleable>
+
+    <declare-styleable name="IndexedDrawable">
+        <attr name="android:src" format="string|reference"/>
+        <attr name="android:tint" format="color|reference"/>
+    </declare-styleable>
+</resources>
