@@ -18,6 +18,8 @@ import org.bitmapdecoder.PngDecoder.PngHeaderInfo;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
@@ -37,6 +39,7 @@ public final class PngSupport {
     public static final int FLAG_MIRRORED = 0b010;
 
     @IntDef(value = { FLAG_TILED, FLAG_MIRRORED }, flag = true)
+    @Retention(RetentionPolicy.SOURCE)
     public static @interface Options {
     }
 

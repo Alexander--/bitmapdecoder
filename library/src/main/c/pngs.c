@@ -65,7 +65,7 @@ JNIEXPORT jint JNICALL Java_org_bitmapdecoder_PngDecoder_decode(
         jbyteArray out_palette,
         jint options
 ) {
-    const void* const mapped = (*env)->GetDirectBufferAddress(env, buffer);
+    void* const mapped = (*env)->GetDirectBufferAddress(env, buffer);
     const jlong size = (*env)->GetDirectBufferCapacity(env, buffer);
 
     wuffs_png__decoder decoder;

@@ -5,6 +5,7 @@ android {
     buildToolsVersion '33.0.1'
     defaultConfig {
         applicationId 'org.bitmapdecoder.demo'
+        namespace 'org.bitmapdecoder.demo'
         minSdkVersion 21
         targetSdkVersion 33
         versionCode 1
@@ -17,6 +18,8 @@ android {
             minifyEnabled false
         }
     }
+
+    ndkVersion '25.1.8937393'
 }
 
 dependencies {
