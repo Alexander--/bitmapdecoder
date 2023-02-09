@@ -4,6 +4,7 @@ import android.content.res.*;
 import android.graphics.*;
 import android.os.Build;
 import android.util.AttributeSet;
+import android.util.StateSet;
 import android.util.TypedValue;
 import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
@@ -63,6 +64,10 @@ public class IndexedDrawable extends ShaderDrawable {
 
                     if (tintList != null || attributeConfigurations != 0) {
                         state = new IndexedDrawableState(state, tintList, attributeConfigurations);
+
+                        if (tintList != null) {
+                            applyTint(StateSet.NOTHING, getState(), tintList, true);
+                        }
                     }
 
                     return;
@@ -79,7 +84,7 @@ public class IndexedDrawable extends ShaderDrawable {
     public void setTintList(@Nullable ColorStateList tint) {
         this.state = new IndexedDrawableState(state, tint, state.getChangingConfigurations());
 
-        invalidateSelf();
+        applyTint(getState(), getState(), tint, true);
     }
 
     @Override
@@ -97,18 +102,28 @@ public class IndexedDrawable extends ShaderDrawable {
 
         final ColorStateList stateList = getTint();
         if (stateList != null) {
-            final int defaultColor = stateList.getDefaultColor();
-            final int currentColor = stateList.getColorForState(oldState, defaultColor);
-            final int newColor = stateList.getColorForState(stateSet, defaultColor);
-
-            if (newColor != currentColor) {
-                changed = true;
-
-                setColorFilter(new PorterDuffColorFilter(newColor, PorterDuff.Mode.SRC_IN));
-            }
+            changed = applyTint(oldState, stateSet, stateList, false);
         }
 
         return changed;
+    }
+
+    private boolean applyTint(int[] oldState, int[] currentState, ColorStateList stateList, boolean force) {
+        if (stateList == null) {
+            setColorFilter(null);
+            return true;
+        }
+
+        final int defaultColor = stateList.getDefaultColor();
+        final int currentColor = stateList.getColorForState(oldState, defaultColor);
+        final int newColor = stateList.getColorForState(currentState, defaultColor);
+
+        if (force || newColor != currentColor) {
+            setColorFilter(new PorterDuffColorFilter(newColor, PorterDuff.Mode.SRC_IN));
+            return true;
+        }
+
+        return false;
     }
 
     private ColorStateList getTint() {
