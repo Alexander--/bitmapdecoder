@@ -69,7 +69,7 @@ JNIEXPORT jint JNICALL Java_org_bitmapdecoder_PngDecoder_decode(
     wuffs_png__decoder decoder;
     wuffs_base__status i_status = wuffs_png__decoder__initialize(&decoder, sizeof decoder, WUFFS_VERSION, 0);
     if (!wuffs_base__status__is_ok(&i_status)) {
-        printf("Failed to initialize PNG decoder: %s\n", wuffs_base__status__message(&i_status));
+        LOG("Failed to initialize PNG decoder: %s\n", wuffs_base__status__message(&i_status));
         return -1;
     }
 
@@ -89,12 +89,12 @@ JNIEXPORT jint JNICALL Java_org_bitmapdecoder_PngDecoder_decode(
     wuffs_base__image_config imageconfig;
     wuffs_base__status dic_status = wuffs_png__decoder__decode_image_config(&decoder, &imageconfig, &src);
     if (!wuffs_base__status__is_ok(&dic_status)) {
-        printf("Failed to get config: %s\n", wuffs_base__status__message(&dic_status));
+        LOG("Failed to get config: %s\n", wuffs_base__status__message(&dic_status));
         return 0;
     }
 
     if (!wuffs_base__image_config__is_valid(&imageconfig)) {
-        printf("Invalid image configuration\n");
+        LOG("%s\n", "Invalid image configuration");
         return 0;
     }
 
