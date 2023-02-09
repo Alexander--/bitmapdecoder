@@ -8,7 +8,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
 set(CMAKE_LD_FLAGS "{CMAKE_LD_FLAGS} -O0")
 else(CMAKE_BUILD_TYPE STREQUAL "Debug")
 # Use release settings (best performance)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -flto -ffast-math -fno-function-sections")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -flto -ffast-math -fno-function-sections -fvisibility=hidden")
 set(CMAKE_LD_FLAGS "{CMAKE_LD_FLAGS} -O3 -flto")
 endif(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
