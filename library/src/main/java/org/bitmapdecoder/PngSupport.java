@@ -45,7 +45,7 @@ public final class PngSupport {
 
     public static @Nullable Drawable getDrawable(@NonNull ByteBuffer source, @Options int options) {
         PngHeaderInfo headerInfo = PngDecoder.getImageInfo(source);
-        if (headerInfo == null || !headerInfo.isIndexed()) {
+        if (headerInfo == null || !headerInfo.isPaletteOrGreyscale()) {
             return null;
         }
         return createDrawable(source, headerInfo, options);
@@ -53,7 +53,7 @@ public final class PngSupport {
 
     public static @Nullable Paint getPaint(@NonNull ByteBuffer source, @Options int options) {
         PngHeaderInfo headerInfo = PngDecoder.getImageInfo(source);
-        if (headerInfo == null || !headerInfo.isIndexed()) {
+        if (headerInfo == null || !headerInfo.isPaletteOrGreyscale()) {
             return null;
         }
         return createPaint(source, headerInfo, options);
@@ -100,6 +100,10 @@ public final class PngSupport {
             final Shader.TileMode tileMode = toTileMode(options);
             paint.setColorFilter(new PorterDuffColorFilter(color(palette), PorterDuff.Mode.SRC_IN));
             paint.setShader(new BitmapShader(result.bitmap, tileMode, tileMode));
+        } else if (result.decodedAsGreyscale()) {
+            final Shader.TileMode tileMode = toTileMode(options);
+            paint.setColorFilter(new ColorMatrixColorFilter(alphaToGrayFilter()));
+            paint.setShader(new BitmapShader(result.bitmap, tileMode, tileMode));
         } else {
             if (Build.VERSION.SDK_INT < 33) {
                 return null;
@@ -108,6 +112,15 @@ public final class PngSupport {
             paint.setShader(shader);
         }
         return paint;
+    }
+
+    private static float[] alphaToGrayFilter() {
+        return new float[] {
+                0, 0, 0, 1, 0,
+                0, 0, 0, 1, 0,
+                0, 0, 0, 1, 0,
+                0, 0, 0, 0, 255
+        };
     }
 
     private static Shader.TileMode toTileMode(int options) {

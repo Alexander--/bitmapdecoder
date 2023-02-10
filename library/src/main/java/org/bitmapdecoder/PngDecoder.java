@@ -29,13 +29,17 @@ public final class PngDecoder {
     public static final int OPTION_DECODE_AS_MASK = 0b0001;
 
     public static final int FLAG_IS_INDEXED    = 0b00100;
+    public static final int FLAG_IS_GREYSCALE  = 0b01000;
+    public static final int FLAGS_8BIT = FLAG_IS_INDEXED | FLAG_IS_GREYSCALE;
 
     private static final int SUCCESS_MASK           = 0b0001;
     private static final int FLAG_CONVERTED_TO_MASK = 0b0010;
-    private static final int FLAG_OPAQUE            = 0x4;
+    private static final int FLAG_CONVERTED_TO_GREY = 0b0100;
+    private static final int FLAG_OPAQUE            = 0b1000;
 
     private static final long PNG_SIGNATURE_LONG = -8552249625308161526L;
-    private static final long PNG_COLOR_INDEXED = 3;
+    private static final int PNG_COLOR_GREYSCALE = 0;
+    private static final int PNG_COLOR_INDEXED = 3;
 
     /**
      * Load native libraries, required by decoder.
@@ -70,7 +74,18 @@ public final class PngDecoder {
             final int height = image.getInt();
             final int colorType = (image.getInt() & 0x00ff0000) >>> 16;
 
-            final int flags = colorType == PNG_COLOR_INDEXED ? FLAG_IS_INDEXED : 0;
+            final int flags;
+
+            switch (colorType) {
+                case PNG_COLOR_INDEXED:
+                    flags = FLAG_IS_INDEXED;
+                    break;
+                case PNG_COLOR_GREYSCALE:
+                    flags = FLAG_IS_GREYSCALE;
+                    break;
+                default:
+                    flags = 0;
+            }
 
             return new PngHeaderInfo(width, height, flags);
         } finally {
@@ -130,6 +145,10 @@ public final class PngDecoder {
             return (flags & FLAG_CONVERTED_TO_MASK) != 0;
         }
 
+        public boolean decodedAsGreyscale() {
+            return (flags & FLAG_CONVERTED_TO_GREY) != 0;
+        }
+
         public boolean isOpaque() {
             return (flags & FLAG_OPAQUE) != 0;
         }
@@ -146,6 +165,14 @@ public final class PngDecoder {
 
         public boolean isIndexed() {
             return (flags & PngDecoder.FLAG_IS_INDEXED) != 0;
+        }
+
+        public boolean isGreyscale() {
+            return (flags & PngDecoder.FLAG_IS_GREYSCALE) != 0;
+        }
+
+        boolean isPaletteOrGreyscale() {
+            return (flags & PngDecoder.FLAGS_8BIT) != 0;
         }
     }
 

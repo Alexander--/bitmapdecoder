@@ -30,7 +30,8 @@
 
 #define LOG(str, ...) (__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, str, __VA_ARGS__))
 
-#define FLAG_OPAQUE 0x4
+#define FLAG_GREY 0x4
+#define FLAG_OPAQUE 0x8
 
 // copied from wuffs internals
 static inline uint32_t abgr_nonpremul_to_argb_premul(uint32_t argb_nonpremul) {
@@ -108,7 +109,19 @@ JNIEXPORT jint JNICALL Java_org_bitmapdecoder_PngDecoder_decode(
     void* dst_buffer = NULL;
     uint64_t dst_len;
 
-    if (out_palette == NULL) {
+    wuffs_base__pixel_format source_format = wuffs_base__pixel_config__pixel_format(&imageconfig.pixcfg);
+    if (source_format.repr == WUFFS_BASE__PIXEL_FORMAT__Y ||
+        source_format.repr == WUFFS_BASE__PIXEL_FORMAT__Y_16LE ||
+        source_format.repr == WUFFS_BASE__PIXEL_FORMAT__Y_16BE) {
+
+        wuffs_base__pixel_config__set(
+            &imageconfig.pixcfg, WUFFS_BASE__PIXEL_FORMAT__Y,
+            WUFFS_BASE__PIXEL_SUBSAMPLING__NONE, img_width, img_height);
+
+        dst_len = img_width * img_height;
+
+        AndroidBitmap_lockPixels(env, out_image, &dst_buffer);
+    } else if (out_palette == NULL) {
         // decode as RGBA
         //LOG("%s\n", "Decoding indexed as RGBA");
 
@@ -117,8 +130,6 @@ JNIEXPORT jint JNICALL Java_org_bitmapdecoder_PngDecoder_decode(
              WUFFS_BASE__PIXEL_SUBSAMPLING__NONE, img_width, img_height);
 
         dst_len = img_width * img_height * 4;
-
-        goto allocate_buffer; //!!!
 
         AndroidBitmap_lockPixels(env, out_image, &dst_buffer);
     } else {
@@ -168,7 +179,9 @@ allocate_buffer:
 
     jint result = 1;
 
-    if (out_palette != NULL) {
+    if (wuffs_base__pixel_config__pixel_format(&imageconfig.pixcfg).repr == WUFFS_BASE__PIXEL_FORMAT__Y) {
+        result |= FLAG_GREY;
+    } else if (out_palette != NULL) {
         const uint8_t* palette = wuffs_base__pixel_buffer__palette(&pb).ptr;
 
         void *palette_mem = (*env)->GetPrimitiveArrayCritical(env, out_palette, NULL);
