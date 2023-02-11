@@ -30,6 +30,7 @@ public final class PngDecoder {
 
     public static final int FLAG_IS_INDEXED    = 0b00100;
     public static final int FLAG_IS_GREYSCALE  = 0b01000;
+    public static final int FLAG_IS_RGB        = 0b10000;
     public static final int FLAGS_8BIT = FLAG_IS_INDEXED | FLAG_IS_GREYSCALE;
 
     private static final int SUCCESS_MASK           = 0b0001;
@@ -39,6 +40,7 @@ public final class PngDecoder {
 
     private static final long PNG_SIGNATURE_LONG = -8552249625308161526L;
     private static final int PNG_COLOR_GREYSCALE = 0;
+    private static final int PNG_COLOR_RGB = 2;
     private static final int PNG_COLOR_INDEXED = 3;
 
     /**
@@ -82,6 +84,9 @@ public final class PngDecoder {
                     break;
                 case PNG_COLOR_GREYSCALE:
                     flags = FLAG_IS_GREYSCALE;
+                    break;
+                case PNG_COLOR_RGB:
+                    flags = FLAG_IS_RGB;
                     break;
                 default:
                     flags = 0;
@@ -169,6 +174,10 @@ public final class PngDecoder {
 
         public boolean isGreyscale() {
             return (flags & PngDecoder.FLAG_IS_GREYSCALE) != 0;
+        }
+
+        public boolean isRGB() {
+            return (flags & PngDecoder.FLAG_IS_RGB) != 0;
         }
 
         boolean isPaletteOrGreyscale() {
