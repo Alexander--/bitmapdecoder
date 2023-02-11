@@ -48,12 +48,21 @@ static inline uint32_t abgr_nonpremul_to_argb_premul(uint32_t argb_nonpremul) {
   return (a << 24) | (b << 16) | (g << 8) | (r << 0);
 }
 
-static void copyPalette(const uint8_t *restrict dest, const uint8_t *restrict src, size_t size) {
+static int copyPalette(const uint8_t *restrict dest, const uint8_t *restrict src, size_t size) {
+    int is_opaque = 1;
+
     for (int i = 0; i < size; i += 4) {
         const uint32_t* srcColor = (uint32_t*) (src + i);
         uint32_t* dstColor = (uint32_t*) (dest + i);
-        *dstColor = abgr_nonpremul_to_argb_premul(*srcColor);
+
+        const uint32_t abgr = *srcColor;
+        const uint32_t alpha = 0xFF & (abgr >> 24);
+        if (alpha != 0xFF) is_opaque = 0;
+
+        *dstColor = abgr_nonpremul_to_argb_premul(abgr);
     }
+
+    return is_opaque;
 }
 
 JNIEXPORT jint JNICALL Java_org_bitmapdecoder_PngDecoder_decode(
@@ -181,12 +190,16 @@ allocate_buffer:
 
     if (wuffs_base__pixel_config__pixel_format(&imageconfig.pixcfg).repr == WUFFS_BASE__PIXEL_FORMAT__Y) {
         result |= FLAG_GREY;
+        result |= FLAG_OPAQUE;
     } else if (out_palette != NULL) {
         const uint8_t* palette = wuffs_base__pixel_buffer__palette(&pb).ptr;
 
         void *palette_mem = (*env)->GetPrimitiveArrayCritical(env, out_palette, NULL);
 
-        copyPalette(palette_mem, palette, 256 * 4);
+        int is_opaque = copyPalette(palette_mem, palette, 256 * 4);
+        if (is_opaque) {
+            result |= FLAG_OPAQUE;
+        }
 
         (*env)->ReleasePrimitiveArrayCritical(env, out_palette, palette_mem, 0);
     }
