@@ -75,10 +75,18 @@ JNIEXPORT jint JNICALL Java_org_bitmapdecoder_PngDecoder_decode(
         jobject buffer,
         jobject out_image,
         jbyteArray out_palette,
+        jint position,
+        jint limit,
         jint options
 ) {
-    void* const mapped = (*env)->GetDirectBufferAddress(env, buffer);
-    const jlong size = (*env)->GetDirectBufferCapacity(env, buffer);
+    uint8_t* mapped = (*env)->GetDirectBufferAddress(env, buffer);
+    if (mapped == NULL) {
+        return 0;
+    }
+
+    mapped += position;
+
+    const jlong size = limit - position;
 
     wuffs_png__decoder decoder;
     wuffs_base__status i_status = wuffs_png__decoder__initialize(&decoder, sizeof decoder, WUFFS_VERSION, 0);

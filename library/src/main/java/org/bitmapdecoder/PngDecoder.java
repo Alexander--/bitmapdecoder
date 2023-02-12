@@ -135,7 +135,7 @@ public final class PngDecoder {
 
         Trace.beginSection("decode");
         try {
-            returnCode = decode(image, output, palette, options);
+            returnCode = decode(image, output, palette, image.position(), image.limit(), options);
             if ((returnCode & SUCCESS_MASK) == 0) {
                 return null;
             }
@@ -221,5 +221,5 @@ public final class PngDecoder {
         return i;
     }
 
-    private static native int decode(ByteBuffer buffer, Bitmap imageBitmap, byte[] palette, int options);
+    private static native int decode(ByteBuffer buffer, Bitmap imageBitmap, byte[] palette, int pos, int end, int options);
 }
