@@ -1,3 +1,7 @@
+// Copyright 2023 Alexander Rvachev
+// Licensed under Apache License, Version 2.0
+// Refer to the LICENSE file included.
+
 #define __ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__ 1
 
 #include <stdio.h>
