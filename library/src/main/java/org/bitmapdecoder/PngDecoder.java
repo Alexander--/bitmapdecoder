@@ -122,7 +122,10 @@ public final class PngDecoder {
      * @return {@link DecodingResult}, describing outcome of decoding or null in case of failure
      */
     public static @Nullable DecodingResult decodeIndexed(@NonNull ByteBuffer image, @NonNull Bitmap output, int options) {
-        if (output.getConfig() != Bitmap.Config.ALPHA_8) {
+        if (output.getConfig() != Bitmap.Config.ALPHA_8 || !output.isMutable()) {
+            throw new IllegalArgumentException();
+        }
+        if (!image.isDirect() || !image.hasRemaining()) {
             throw new IllegalArgumentException();
         }
 
