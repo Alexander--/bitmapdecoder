@@ -32,7 +32,7 @@
 
 #define LOG_TAG "pngs"
 
-#define LOG(str, ...) (__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, str, __VA_ARGS__))
+#define LOG(str, ...) (__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, str, __VA_ARGS__))
 
 #define FLAG_GREY 0x4
 #define FLAG_OPAQUE 0x8
@@ -92,7 +92,7 @@ JNIEXPORT jint JNICALL Java_org_bitmapdecoder_PngDecoder_decode(
     wuffs_base__status i_status = wuffs_png__decoder__initialize(&decoder, sizeof decoder, WUFFS_VERSION, 0);
     if (!wuffs_base__status__is_ok(&i_status)) {
         LOG("Failed to initialize PNG decoder: %s\n", wuffs_base__status__message(&i_status));
-        return -1;
+        return 0;
     }
 
     wuffs_base__io_buffer src = {
@@ -111,17 +111,28 @@ JNIEXPORT jint JNICALL Java_org_bitmapdecoder_PngDecoder_decode(
     wuffs_base__image_config imageconfig;
     wuffs_base__status dic_status = wuffs_png__decoder__decode_image_config(&decoder, &imageconfig, &src);
     if (!wuffs_base__status__is_ok(&dic_status)) {
-        LOG("Failed to get config: %s\n", wuffs_base__status__message(&dic_status));
+        LOG("Header parsing failed: %s\n", wuffs_base__status__message(&dic_status));
         return 0;
     }
 
     if (!wuffs_base__image_config__is_valid(&imageconfig)) {
-        LOG("%s\n", "Invalid image configuration");
+        LOG("%s\n", "Invalid configuration");
         return 0;
     }
 
     const uint32_t img_width = wuffs_base__pixel_config__width(&imageconfig.pixcfg);
     const uint32_t img_height = wuffs_base__pixel_config__height(&imageconfig.pixcfg);
+
+    AndroidBitmapInfo bitmap_info;
+    bitmap_info.width = 0;
+    bitmap_info.height = 0;
+
+    AndroidBitmap_getInfo(env, out_image, &bitmap_info);
+
+    if (img_width * img_height > bitmap_info.width * bitmap_info.height) {
+        LOG("Bitmap is %d x %d, needed %d x %d\n", bitmap_info.width, bitmap_info.height, img_width, img_height);
+        return 0;
+    }
 
     wuffs_base__slice_u8 workbuff, dstbuff;
 
@@ -190,7 +201,7 @@ allocate_buffer:
 
     wuffs_base__status framestatus = wuffs_png__decoder__decode_frame(&decoder, &pb, &src, WUFFS_BASE__PIXEL_BLEND__SRC, workbuff, NULL);
     if (!wuffs_base__status__is_ok(&framestatus)) {
-        LOG("Failed to decode 8-bit image: %s\n", wuffs_base__status__message(&framestatus));
+        LOG("Failed to decode image: %s\n", wuffs_base__status__message(&framestatus));
         return 0;
     }
 
