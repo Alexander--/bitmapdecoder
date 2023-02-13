@@ -99,3 +99,17 @@ afterEvaluate {
         }
     }
 }
+
+tasks.register('publishReleaseDocs', Copy) {
+    var sourceTask = tasks.javaDocReleaseGeneration
+    var targetDir = "$rootDir/repo/docs"
+
+    dependsOn sourceTask
+
+    doFirst {
+        mkdir targetDir
+    }
+
+    from sourceTask.outputs.files
+    into targetDir
+}
