@@ -160,9 +160,17 @@ public class IndexedDrawable extends ShaderDrawable {
     }
 
     private float applyDensity(DisplayMetrics metrics, int sDensity) {
-        if (metrics.densityDpi == sDensity) return 1.0f;
-
         int tDensity = metrics.densityDpi;
+
+        if (sDensity == 0) {
+            sDensity = DisplayMetrics.DENSITY_MEDIUM;
+        }
+
+        if (tDensity == sDensity) return 1.0f;
+
+        if (sDensity == TypedValue.DENSITY_NONE || tDensity == TypedValue.DENSITY_NONE) {
+            return 1.0f;
+        }
 
         int w = state.width;
         int h = state.height;
