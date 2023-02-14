@@ -7,5 +7,10 @@
     <declare-styleable name="IndexedDrawable">
         <attr name="android:src" format="string|reference"/>
         <attr name="android:tint" format="color|reference"/>
+        <attr name="android:tileMode" format="enum">
+            <enum name="mirror" value="2"/>
+            <enum name="repeat" value="1"/>
+            <enum name="disabled" value="0xffffffff"/>
+        </attr>
     </declare-styleable>
 </resources>

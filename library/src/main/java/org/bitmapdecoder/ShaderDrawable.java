@@ -65,12 +65,15 @@ public class ShaderDrawable extends Drawable {
         float dstHeight = bounds.height();
         float srcWidth = getIntrinsicWidth();
         float srcHeight = getIntrinsicHeight();
-        if (dstWidth == srcWidth && dstHeight == srcHeight) {
+        if (state.isTiled() && dstWidth == srcWidth && dstHeight == srcHeight) {
             canvas.drawRect(bounds, state.paint);
         } else {
+            float scale = Math.max(dstWidth / srcWidth, dstHeight / srcHeight) * state.getScale();
             canvas.save();
-            canvas.scale(dstWidth / srcWidth, dstHeight / srcHeight);
-            canvas.drawRect(bounds, state.paint);
+            canvas.clipRect(bounds);
+            canvas.translate(bounds.left, bounds.top);
+            canvas.scale(scale, scale);
+            canvas.drawPaint(state.paint);
             canvas.restore();
         }
     }
@@ -196,6 +199,14 @@ public class ShaderDrawable extends Drawable {
         @Override
         public int getChangingConfigurations() {
             return 0;
+        }
+
+        protected boolean isTiled() {
+            return false;
+        }
+
+        protected float getScale() {
+            return 1.0f;
         }
     }
 }

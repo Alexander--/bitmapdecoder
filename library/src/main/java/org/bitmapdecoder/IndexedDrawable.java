@@ -17,8 +17,10 @@ package org.bitmapdecoder;
 
 import android.content.res.*;
 import android.graphics.*;
+import android.graphics.Bitmap.Config;
 import android.os.Build;
 import android.util.AttributeSet;
+import android.util.DisplayMetrics;
 import android.util.StateSet;
 import android.util.TypedValue;
 import androidx.annotation.DrawableRes;
@@ -35,6 +37,8 @@ import java.nio.ByteBuffer;
  */
 public class IndexedDrawable extends ShaderDrawable {
     private static final String TAG = "pngs";
+
+    private static final int DISABLE_TILING = 0xffffffff;
 
     public IndexedDrawable(@NonNull Resources resources, @DrawableRes int resourceId) {
         this();
@@ -71,14 +75,27 @@ public class IndexedDrawable extends ShaderDrawable {
 
         final TypedValue tv = new TypedValue();
         try {
+            final boolean tiled;
+            final int tileMode;
+
+            if (typedArray.getValue(R.styleable.IndexedDrawable_android_tileMode, tv)) {
+                tileMode = tv.data == DISABLE_TILING ? 0 : tv.data;
+                tiled = tv.data != DISABLE_TILING;
+            } else {
+                tileMode = 0;
+                tiled = false;
+            }
+
             if (typedArray.getValue(R.styleable.IndexedDrawable_android_src, tv)) {
-                if (decodePreview(r, typedArray) || decode(r, tv)) {
+                if (decodePreview(r, typedArray) || decode(r, tv, tileMode)) {
+                    float scale = applyDensity(r.getDisplayMetrics(), tv.density);
+
                     ColorStateList tintList = typedArray.getColorStateList(R.styleable.IndexedDrawable_android_tint);
 
                     int attributeConfigurations = typedArray.getChangingConfigurations();
 
-                    if (tintList != null || attributeConfigurations != 0) {
-                        state = new IndexedDrawableState(state, tintList, attributeConfigurations);
+                    if (tintList != null || attributeConfigurations != 0 || scale != 1.0 || tiled) {
+                        state = new IndexedDrawableState(state, tintList, attributeConfigurations, scale, tiled);
 
                         if (tintList != null) {
                             applyTint(StateSet.NOTHING, getState(), tintList, true);
@@ -97,7 +114,8 @@ public class IndexedDrawable extends ShaderDrawable {
 
     @Override
     public void setTintList(@Nullable ColorStateList tint) {
-        this.state = new IndexedDrawableState(state, tint, state.getChangingConfigurations());
+        this.state = new IndexedDrawableState(state, tint, state.getChangingConfigurations(),
+                state.getScale(), state.isTiled());
 
         applyTint(getState(), getState(), tint, true);
     }
@@ -141,6 +159,23 @@ public class IndexedDrawable extends ShaderDrawable {
         return false;
     }
 
+    private float applyDensity(DisplayMetrics metrics, int sDensity) {
+        if (metrics.densityDpi == sDensity) return 1.0f;
+
+        int tDensity = metrics.densityDpi;
+
+        int w = state.width;
+        int h = state.height;
+
+        state = new State(state.paint, scale(w, sDensity, tDensity), scale(h, sDensity, tDensity), state.opaque);
+
+        return state.width / (float) w;
+    }
+
+    private static int scale(int size, int sourceDensity, int targetDensity) {
+        return ((size * targetDensity) + (sourceDensity >> 1)) / sourceDensity;
+    }
+
     private ColorStateList getTint() {
         if (!(state instanceof IndexedDrawableState)) {
             return null;
@@ -149,26 +184,42 @@ public class IndexedDrawable extends ShaderDrawable {
         return ((IndexedDrawableState) state).tint;
     }
 
-    private boolean decode(Resources r, TypedValue tv) throws IOException {
+    private void decode(Resources r, TypedValue tv) throws IOException {
+        if (!decode(r, tv, 0)) {
+            throw new IOException(PngSupport.ERROR_CODE_DECODING_FAILED);
+        }
+
+        float scale = applyDensity(r.getDisplayMetrics(), tv.density);
+        if (scale != 1.0) {
+            state = new IndexedDrawableState(state, getTint(), state.getChangingConfigurations(),
+                    scale, state.isTiled());
+        }
+    }
+
+    private boolean decode(Resources r, TypedValue tv, int tileMode) throws IOException {
         final AssetManager am = r.getAssets();
 
         try (AssetFileDescriptor stream = am.openNonAssetFd(tv.assetCookie, tv.string.toString())) {
             final ByteBuffer buffer = PngSupport.loadIndexedPng(stream);
-            if (decode(buffer)) {
+            if (decode(buffer, tileMode)) {
                 return true;
             }
-            return decodeFallback(r, tv);
+            return decodeFallback(r, tv, tileMode);
         }
     }
 
     private boolean decode(ByteBuffer buffer) {
+        return decode(buffer, 0);
+    }
+
+    private boolean decode(ByteBuffer buffer, int tileMode) {
         final PngDecoder.PngHeaderInfo headerInfo = PngDecoder.getImageInfo(buffer);
         if (headerInfo == null) {
             return false;
         }
-        final Bitmap imageBitmap = Bitmap.createBitmap(headerInfo.width, headerInfo.height, Bitmap.Config.ALPHA_8);
+        final Bitmap imageBitmap = Bitmap.createBitmap(headerInfo.width, headerInfo.height, Config.ALPHA_8);
         final PngDecoder.DecodingResult result = PngDecoder.decodeIndexed(buffer, imageBitmap, PngDecoder.OPTION_DECODE_AS_MASK);
-        final Paint paint = result == null ? null : PngSupport.createPaint(result, imageBitmap, 0);
+        final Paint paint = result == null ? null : PngSupport.createPaint(result, imageBitmap, tileMode);
         if (paint != null) {
             state = new State(paint, headerInfo.width, headerInfo.height, result.isOpaque());
             return true;
@@ -178,17 +229,22 @@ public class IndexedDrawable extends ShaderDrawable {
         return false;
     }
 
+    private static Shader.TileMode toTileMode(int tileMode) {
+        return Shader.TileMode.values()[tileMode];
+    }
+
     private boolean decodePreview(Resources r, TypedArray typedArray) {
         return PngSupport.isPreview(typedArray);
     }
 
-    private boolean decodeFallback(Resources r, TypedValue tv) {
+    private boolean decodeFallback(Resources r, TypedValue tv, int tileMode) {
         final Bitmap bitmap = BitmapFactory.decodeResource(r, tv.resourceId);
         if (bitmap == null) {
             return false;
         }
         final Paint fallback = new Paint();
-        fallback.setShader(new BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP));
+        final Shader.TileMode tiled = toTileMode(tileMode);
+        fallback.setShader(new BitmapShader(bitmap, tiled, tiled));
         state = new State(fallback, bitmap.getWidth(), bitmap.getHeight(), !bitmap.hasAlpha());
         return true;
     }
@@ -197,17 +253,35 @@ public class IndexedDrawable extends ShaderDrawable {
         final ColorStateList tint;
 
         private final int configurations;
+        private final float scale;
+        private final boolean tiled;
 
-        private IndexedDrawableState(@NonNull State state, @Nullable ColorStateList tint, int configurations) {
+        private IndexedDrawableState(@NonNull State state,
+                                     ColorStateList tint,
+                                     int configurations,
+                                     float scale,
+                                     boolean tiled) {
             super(state.paint, state.width, state.height, state.opaque);
 
             this.tint = tint;
+            this.scale = scale;
+            this.tiled = tiled;
             this.configurations = configurations | getConfigurations(tint);
         }
 
         @Override
         public int getChangingConfigurations() {
             return configurations;
+        }
+
+        @Override
+        protected boolean isTiled() {
+            return tiled;
+        }
+
+        @Override
+        protected float getScale() {
+            return scale;
         }
 
         private static int getConfigurations(ColorStateList colorStateList) {
