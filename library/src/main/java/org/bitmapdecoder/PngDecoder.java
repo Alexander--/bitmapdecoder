@@ -206,19 +206,16 @@ public final class PngDecoder {
     private static int getPaletteSize(ByteBuffer palette) {
         final IntBuffer ib = palette.asIntBuffer();
 
-        if (ib.get(255) != 0) {
-            return 256;
-        }
+        final int last = ib.get(255);
 
-        boolean hadZero = false;
         int i;
-        for (i = 255; i > 0; --i) {
-            if (ib.get(i) == 0) {
-                if (hadZero) break;
-                hadZero = true;
+        for (i = 254; i > 0; --i) {
+            if (ib.get(i) != last) {
+                return i + 2;
             }
         }
-        return i;
+
+        return 1;
     }
 
     private static native int decode(ByteBuffer buffer, Bitmap imageBitmap, byte[] palette, int pos, int end, int options);
