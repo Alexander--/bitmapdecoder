@@ -65,17 +65,15 @@ public class ShaderDrawable extends Drawable {
         float dstHeight = bounds.height();
         float srcWidth = getIntrinsicWidth();
         float srcHeight = getIntrinsicHeight();
-        if (state.isTiled() && dstWidth == srcWidth && dstHeight == srcHeight) {
-            canvas.drawRect(bounds, state.paint);
-        } else {
-            float scale = Math.max(dstWidth / srcWidth, dstHeight / srcHeight) * state.getScale();
-            canvas.save();
-            canvas.clipRect(bounds);
-            canvas.translate(bounds.left, bounds.top);
-            canvas.scale(scale, scale);
-            canvas.drawPaint(state.paint);
-            canvas.restore();
-        }
+        float imageScale = state.isTiled() ? 1.0f : Math.max(dstWidth / srcWidth, dstHeight / srcHeight);
+        float finalScale = imageScale * state.getScale();
+
+        canvas.save();
+        canvas.clipRect(bounds);
+        canvas.translate(bounds.left, bounds.top);
+        canvas.scale(finalScale, finalScale);
+        canvas.drawPaint(state.paint);
+        canvas.restore();
     }
 
     @NonNull
@@ -182,10 +180,6 @@ public class ShaderDrawable extends Drawable {
             paint.setDither(false);
         }
 
-        State copy() {
-            return new State(new Paint(paint), width, height, opaque);
-        }
-
         boolean isOpaque() {
             return opaque && paint.getAlpha() == 255;
         }
@@ -194,6 +188,10 @@ public class ShaderDrawable extends Drawable {
         @Override
         public Drawable newDrawable() {
             return new ShaderDrawable(this);
+        }
+
+        protected State copy() {
+            return new State(new Paint(paint), width, height, opaque);
         }
 
         @Override

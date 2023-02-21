@@ -16,18 +16,13 @@
 package org.bitmapdecoder;
 
 import android.annotation.TargetApi;
-import android.content.res.AssetFileDescriptor;
-import android.content.res.Resources;
-import android.content.res.TypedArray;
+import android.content.res.*;
 import android.graphics.*;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.util.Log;
 import android.util.TypedValue;
-import androidx.annotation.AnyRes;
-import androidx.annotation.IntDef;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import androidx.annotation.*;
 import org.bitmapdecoder.PngDecoder.DecodingResult;
 import org.bitmapdecoder.PngDecoder.PngHeaderInfo;
 
@@ -211,6 +206,17 @@ public final class PngSupport {
 
     static boolean isPreview(TypedArray typedArray) {
         return typedArray.getClass().getName().contains("BridgeTypedArray");
+    }
+
+    @SuppressWarnings("deprecation")
+    static ColorStateList toColor(Resources.Theme theme, TypedValue typedValue) {
+        Resources resources = theme.getResources();
+
+        if (Build.VERSION.SDK_INT >= 23) {
+            return resources.getColorStateList(typedValue.resourceId, theme);
+        } else {
+            return resources.getColorStateList(typedValue.resourceId);
+        }
     }
 
     private static volatile boolean noHwAlpha8;

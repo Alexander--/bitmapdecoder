@@ -18,14 +18,14 @@ package org.bitmapdecoder;
 import android.content.res.*;
 import android.graphics.*;
 import android.graphics.Bitmap.Config;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.StateSet;
 import android.util.TypedValue;
-import androidx.annotation.DrawableRes;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import androidx.annotation.*;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -36,6 +36,8 @@ import java.nio.ByteBuffer;
  * A subclass of {@link ShaderDrawable}, that can be used in XML
  */
 public class IndexedDrawable extends ShaderDrawable {
+    private static final State EMPTY_STATE = new State(new Paint(), -1, -1, false);
+
     private static final String TAG = "pngs";
 
     private static final int DISABLE_TILING = 0xffffffff;
@@ -59,7 +61,39 @@ public class IndexedDrawable extends ShaderDrawable {
     }
 
     public IndexedDrawable() {
-        super(new Paint(), -1, -1, false);
+        super(EMPTY_STATE);
+    }
+
+    protected IndexedDrawable(State state) {
+        super(state);
+    }
+
+    @Override
+    public boolean canApplyTheme() {
+        if (!(state instanceof IndexedDrawableState)) {
+            return false;
+        }
+        IndexedDrawableState state = (IndexedDrawableState) this.state;
+        return state.tintResId != 0 && state.tint == null;
+    }
+
+    @Override
+    public void applyTheme(@NonNull Resources.Theme theme) {
+        TypedValue tv = new TypedValue();
+
+        if (theme.resolveAttribute(getTintResId(), tv, true)) {
+            ColorStateList tintList = PngSupport.toColor(theme, tv);
+            if (tintList != null) {
+                int newConfiguration = state.getChangingConfigurations() | tv.changingConfigurations;
+
+                state = new IndexedDrawableState(state, tintList, tv.resourceId, newConfiguration,
+                        state.getScale(), state.isTiled());
+
+                applyTint(StateSet.NOTHING, getState(), tintList, true);
+            }
+        }
+
+        super.applyTheme(theme);
     }
 
     @Override
@@ -73,29 +107,54 @@ public class IndexedDrawable extends ShaderDrawable {
             typedArray = theme.obtainStyledAttributes(set, R.styleable.IndexedDrawable, 0, 0);
         }
 
-        final TypedValue tv = new TypedValue();
         try {
             final boolean tiled;
             final int tileMode;
 
-            if (typedArray.getValue(R.styleable.IndexedDrawable_android_tileMode, tv)) {
-                tileMode = tv.data == DISABLE_TILING ? 0 : tv.data;
-                tiled = tv.data != DISABLE_TILING;
-            } else {
+            final int tileModeAttr = typedArray.getInt(R.styleable.IndexedDrawable_android_tileMode, DISABLE_TILING);
+            if (tileModeAttr == DISABLE_TILING) {
                 tileMode = 0;
                 tiled = false;
+            } else {
+                tileMode = tileModeAttr;
+                tiled = true;
             }
 
-            if (typedArray.getValue(R.styleable.IndexedDrawable_android_src, tv)) {
-                if (decodePreview(r, typedArray) || decode(r, tv, tileMode)) {
+            TypedValue tv = typedArray.peekValue(R.styleable.IndexedDrawable_android_src);
+            if (tv != null) {
+                final boolean decoded = PngSupport.isPreview(typedArray)
+                        ? decodePreview(r, tv, tileMode)
+                        : decode(r, tv, tileMode);
+
+                if (decoded) {
                     float scale = applyDensity(r.getDisplayMetrics(), tv.density);
 
-                    ColorStateList tintList = typedArray.getColorStateList(R.styleable.IndexedDrawable_android_tint);
+                    int tint;
+                    int resType;
+
+                    if (typedArray.getValue(R.styleable.IndexedDrawable_android_tint, tv)) {
+                        tint = tv.data;
+                        resType = tv.type;
+                    } else {
+                        tint = 0;
+                        resType = 0;
+                    }
+
+                    ColorStateList tintList;
+
+                    switch (resType) {
+                        case TypedValue.TYPE_ATTRIBUTE:
+                        case TypedValue.TYPE_NULL:
+                            tintList = null;
+                            break;
+                        default:
+                            tintList = typedArray.getColorStateList(R.styleable.IndexedDrawable_android_tint);
+                    }
 
                     int attributeConfigurations = typedArray.getChangingConfigurations();
 
-                    if (tintList != null || attributeConfigurations != 0 || scale != 1.0 || tiled) {
-                        state = new IndexedDrawableState(state, tintList, attributeConfigurations, scale, tiled);
+                    if (tint != 0 || resType == TypedValue.TYPE_ATTRIBUTE || attributeConfigurations != 0 || tiled) {
+                        state = new IndexedDrawableState(state, tintList, tint, attributeConfigurations, scale, tiled);
 
                         if (tintList != null) {
                             applyTint(StateSet.NOTHING, getState(), tintList, true);
@@ -114,7 +173,7 @@ public class IndexedDrawable extends ShaderDrawable {
 
     @Override
     public void setTintList(@Nullable ColorStateList tint) {
-        this.state = new IndexedDrawableState(state, tint, state.getChangingConfigurations(),
+        this.state = new IndexedDrawableState(state, tint, 0, state.getChangingConfigurations(),
                 state.getScale(), state.isTiled());
 
         applyTint(getState(), getState(), tint, true);
@@ -125,6 +184,11 @@ public class IndexedDrawable extends ShaderDrawable {
         final ColorStateList tint = getTint();
 
         return tint != null && tint.isStateful();
+    }
+
+    @Override
+    public int getChangingConfigurations() {
+        return super.getChangingConfigurations() | state.getChangingConfigurations();
     }
 
     @Override
@@ -192,6 +256,14 @@ public class IndexedDrawable extends ShaderDrawable {
         return ((IndexedDrawableState) state).tint;
     }
 
+    private int getTintResId() {
+        if (!(state instanceof IndexedDrawableState)) {
+            return 0;
+        }
+
+        return ((IndexedDrawableState) state).tintResId;
+    }
+
     private void decode(Resources r, TypedValue tv) throws IOException {
         if (!decode(r, tv, 0)) {
             throw new IOException(PngSupport.ERROR_CODE_DECODING_FAILED);
@@ -199,7 +271,7 @@ public class IndexedDrawable extends ShaderDrawable {
 
         float scale = applyDensity(r.getDisplayMetrics(), tv.density);
         if (scale != 1.0) {
-            state = new IndexedDrawableState(state, getTint(), state.getChangingConfigurations(),
+            state = new IndexedDrawableState(state, getTint(), getTintResId(), state.getChangingConfigurations(),
                     scale, state.isTiled());
         }
     }
@@ -241,8 +313,15 @@ public class IndexedDrawable extends ShaderDrawable {
         return Shader.TileMode.values()[tileMode];
     }
 
-    private boolean decodePreview(Resources r, TypedArray typedArray) {
-        return PngSupport.isPreview(typedArray);
+    // Android Studio Layout Preview can decode Bitmaps only by absolute file paths
+    private boolean decodePreview(Resources r, TypedValue tv, int tileMode) {
+        final BitmapDrawable bitmapDrawable = new BitmapDrawable(r, tv.string.toString());
+        final Bitmap bitmap = bitmapDrawable.getBitmap();
+        if (bitmap == null) {
+            return false;
+        }
+        setShaderFallback(bitmap, tileMode);
+        return true;
     }
 
     private boolean decodeFallback(Resources r, TypedValue tv, int tileMode) {
@@ -250,31 +329,73 @@ public class IndexedDrawable extends ShaderDrawable {
         if (bitmap == null) {
             return false;
         }
+        setShaderFallback(bitmap, tileMode);
+        return true;
+    }
+
+    private void setShaderFallback(Bitmap bitmap, int tileMode) {
         final Paint fallback = new Paint();
         final Shader.TileMode tiled = toTileMode(tileMode);
         fallback.setShader(new BitmapShader(bitmap, tiled, tiled));
         state = new State(fallback, bitmap.getWidth(), bitmap.getHeight(), !bitmap.hasAlpha());
-        return true;
     }
 
     private static class IndexedDrawableState extends State {
-        final ColorStateList tint;
+        protected final ColorStateList tint;
+        protected final int tintResId;
 
         private final int configurations;
         private final float scale;
         private final boolean tiled;
 
-        private IndexedDrawableState(@NonNull State state,
+        private IndexedDrawableState(@NonNull Paint paint,
+                                     @NonNull State state,
                                      ColorStateList tint,
+                                     int tintResId,
                                      int configurations,
                                      float scale,
                                      boolean tiled) {
-            super(state.paint, state.width, state.height, state.opaque);
+            super(paint, state.width, state.height, state.opaque);
 
             this.tint = tint;
+            this.tintResId = tintResId;
             this.scale = scale;
             this.tiled = tiled;
             this.configurations = configurations | getConfigurations(tint);
+        }
+
+        private IndexedDrawableState(@NonNull State state,
+                                     ColorStateList tint,
+                                     int tintResId,
+                                     int configurations,
+                                     float scale,
+                                     boolean tiled) {
+            this(state.paint, state, tint, tintResId, configurations, scale, tiled);
+        }
+
+        @NonNull
+        @Override
+        public IndexedDrawable newDrawable() {
+            return new IndexedDrawable(this);
+        }
+
+        @NonNull
+        @Override
+        public Drawable newDrawable(@Nullable Resources res, @Nullable Resources.Theme theme) {
+            ColorStateList tint = this.tint;
+            if (Build.VERSION.SDK_INT >= 23 && res != null && theme != null && tintResId != 0) {
+                tint = res.getColorStateList(tintResId, theme);
+            }
+            if (tint == this.tint) {
+                return new IndexedDrawable(this);
+            }
+            State s = new IndexedDrawableState(this, tint, tintResId, configurations, scale, tiled);
+            return new IndexedDrawable(s);
+        }
+
+        @Override
+        protected State copy() {
+            return new IndexedDrawableState(new Paint(paint), this, tint, tintResId, configurations, scale, tiled);
         }
 
         @Override
