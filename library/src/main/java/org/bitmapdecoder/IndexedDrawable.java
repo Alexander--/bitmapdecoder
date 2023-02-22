@@ -281,7 +281,8 @@ public class IndexedDrawable extends ShaderDrawable {
 
         try (AssetFileDescriptor stream = am.openNonAssetFd(tv.assetCookie, tv.string.toString())) {
             final ByteBuffer buffer = PngSupport.loadIndexedPng(stream);
-            if (decode(buffer, tileMode)) {
+            final PngDecoder.PngHeaderInfo headerInfo = PngDecoder.getImageInfo(buffer);
+            if (headerInfo != null && headerInfo.isPaletteOrGreyscale() && decode(buffer, headerInfo, tileMode)) {
                 return true;
             }
             return decodeFallback(r, tv, tileMode);
@@ -289,14 +290,14 @@ public class IndexedDrawable extends ShaderDrawable {
     }
 
     private boolean decode(ByteBuffer buffer) {
-        return decode(buffer, 0);
-    }
-
-    private boolean decode(ByteBuffer buffer, int tileMode) {
         final PngDecoder.PngHeaderInfo headerInfo = PngDecoder.getImageInfo(buffer);
         if (headerInfo == null) {
             return false;
         }
+        return decode(buffer, headerInfo, 0);
+    }
+
+    private boolean decode(ByteBuffer buffer, PngDecoder.PngHeaderInfo headerInfo, int tileMode) {
         final Bitmap imageBitmap = Bitmap.createBitmap(headerInfo.width, headerInfo.height, Config.ALPHA_8);
         final PngDecoder.DecodingResult result = PngDecoder.decodeIndexed(buffer, imageBitmap, PngDecoder.OPTION_DECODE_AS_MASK);
         final Paint paint = result == null ? null : PngSupport.createPaint(result, imageBitmap, tileMode);
