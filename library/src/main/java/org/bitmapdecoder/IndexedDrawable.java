@@ -299,7 +299,8 @@ public class IndexedDrawable extends ShaderDrawable {
 
     private boolean decode(ByteBuffer buffer, PngDecoder.PngHeaderInfo headerInfo, int tileMode) {
         final Bitmap imageBitmap = Bitmap.createBitmap(headerInfo.width, headerInfo.height, Config.ALPHA_8);
-        final PngDecoder.DecodingResult result = PngDecoder.decodeIndexed(buffer, imageBitmap, PngDecoder.OPTION_DECODE_AS_MASK);
+        final int decoderFlags = PngDecoder.DEFAULT_DECODER_FLAGS;
+        final PngDecoder.DecodingResult result = PngDecoder.decodeIndexed(buffer, imageBitmap, decoderFlags);
         final Paint paint = result == null ? null : PngSupport.createPaint(result, imageBitmap, tileMode);
         if (paint != null) {
             state = new State(paint, headerInfo.width, headerInfo.height, result.isOpaque());

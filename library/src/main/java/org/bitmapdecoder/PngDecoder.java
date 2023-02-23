@@ -16,6 +16,7 @@
 package org.bitmapdecoder;
 
 import android.graphics.Bitmap;
+import android.os.Build;
 import android.os.Trace;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -57,6 +58,8 @@ public final class PngDecoder {
     private static final int PNG_COLOR_GREYSCALE = 0;
     private static final int PNG_COLOR_RGB = 2;
     private static final int PNG_COLOR_INDEXED = 3;
+
+    static final int DEFAULT_DECODER_FLAGS = Build.VERSION.SDK_INT >= 33 ? 0 : OPTION_DECODE_AS_MASK;
 
     /**
      * Load native libraries, required by decoder.

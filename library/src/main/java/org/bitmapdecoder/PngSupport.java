@@ -81,7 +81,7 @@ public final class PngSupport {
     private static Paint createPaint(ByteBuffer source, PngHeaderInfo headerInfo, @Options int options) {
         final Bitmap rawImageBitmap = Bitmap.createBitmap(headerInfo.width, headerInfo.height, Bitmap.Config.ALPHA_8);
 
-        final DecodingResult result = PngDecoder.decodeIndexed(source, rawImageBitmap, 0);
+        final DecodingResult result = PngDecoder.decodeIndexed(source, rawImageBitmap, PngDecoder.DEFAULT_DECODER_FLAGS);
         if (result == null) {
             return null;
         }
@@ -91,7 +91,7 @@ public final class PngSupport {
     private static Drawable createDrawable(ByteBuffer source, PngHeaderInfo headerInfo, @Options int options) {
         final Bitmap rawImageBitmap = Bitmap.createBitmap(headerInfo.width, headerInfo.height, Bitmap.Config.ALPHA_8);
 
-        final DecodingResult result = PngDecoder.decodeIndexed(source, rawImageBitmap, PngDecoder.OPTION_DECODE_AS_MASK);
+        final DecodingResult result = PngDecoder.decodeIndexed(source, rawImageBitmap, PngDecoder.DEFAULT_DECODER_FLAGS);
         if (result == null) {
             return null;
         }

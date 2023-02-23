@@ -34,6 +34,9 @@
 
 #define LOG(str, ...) (__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, str, __VA_ARGS__))
 
+#define OPTION_DECODE_AS_MASK 0x1
+
+#define FLAG_U8_MASK 0x2
 #define FLAG_GREY 0x4
 #define FLAG_OPAQUE 0x8
 
@@ -67,6 +70,24 @@ static int copyPalette(const uint8_t *restrict dest, const uint8_t *restrict src
     }
 
     return is_opaque;
+}
+
+static int convert_to_mask(uint8_t *restrict dest, uint8_t *restrict src, uint32_t *restrict palette, size_t size) {
+    uint32_t hue = 0;
+
+    for (int i = 0; i < size; i++) {
+        uint8_t value = src[i];
+        uint32_t color = palette[value];
+        uint8_t alpha = (uint8_t) ((color >> 24) & 0xFF);
+        dest[i] = alpha;
+
+        if (alpha != 0) {
+            if (hue != 0 && (hue & 0x00FFFFFF) != (color & 0x00FFFFFF)) return 0;
+            hue = color;
+        }
+    }
+
+    return 1;
 }
 
 JNIEXPORT jint JNICALL Java_org_bitmapdecoder_PngDecoder_decode(
@@ -211,7 +232,11 @@ allocate_buffer:
 
     jint result = 1;
 
+    uint32_t single = 0;
+    int is_opaque = 0;
+
     if (wuffs_base__pixel_config__pixel_format(&imageconfig.pixcfg).repr == WUFFS_BASE__PIXEL_FORMAT__Y) {
+        is_opaque = 1;
         result |= FLAG_GREY;
         result |= FLAG_OPAQUE;
     } else if (out_palette != NULL) {
@@ -219,12 +244,13 @@ allocate_buffer:
 
         void *palette_mem = (*env)->GetPrimitiveArrayCritical(env, out_palette, NULL);
 
-        int is_opaque = copyPalette(palette_mem, palette, 256 * 4);
+        is_opaque = copyPalette(palette_mem, palette, 256 * 4);
+
+        (*env)->ReleasePrimitiveArrayCritical(env, out_palette, palette_mem, 0);
+
         if (is_opaque) {
             result |= FLAG_OPAQUE;
         }
-
-        (*env)->ReleasePrimitiveArrayCritical(env, out_palette, palette_mem, 0);
     }
 
     if (separate_buffer == NULL) {
@@ -236,9 +262,18 @@ allocate_buffer:
 
         void *buffer_mem;
         AndroidBitmap_lockPixels(env, out_image, &buffer_mem);
-        memcpy(buffer_mem, fullimage, img_width * img_height);
-        AndroidBitmap_unlockPixels(env, out_image);
 
+        uint32_t* palette = (uint32_t*) wuffs_base__pixel_buffer__palette(&pb).ptr;
+
+        // if we have an image where all visible palette entries have the same color
+        // (different only be alpha value); this allows us to convert it to alpha mask!
+        if (!is_opaque && (options & OPTION_DECODE_AS_MASK) != 0 && convert_to_mask(buffer_mem, fullimage, palette, img_width * img_height)) {
+            result |= FLAG_U8_MASK;
+        } else {
+            memcpy(buffer_mem, fullimage, img_width * img_height);
+        }
+
+        AndroidBitmap_unlockPixels(env, out_image);
         free(dst_buffer);
     }
 
