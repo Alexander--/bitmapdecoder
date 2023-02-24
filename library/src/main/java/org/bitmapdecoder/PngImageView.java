@@ -75,11 +75,6 @@ public class PngImageView extends ImageView {
 
     @Override
     public void setImageResource(int resId) {
-        if (Build.VERSION.SDK_INT < 33) {
-            super.setImageResource(resId);
-            return;
-        }
-
         if (isAttachedToWindow()) {
             resolveResource(resId);
         } else {
@@ -134,7 +129,7 @@ public class PngImageView extends ImageView {
 
         final AssetManager am = resources.getAssets();
 
-        try (AssetFileDescriptor stream = am.openNonAssetFd(value.assetCookie, value.string.toString())) {
+        try (AssetFileDescriptor stream = am.openNonAssetFd(value.assetCookie, imageFile)) {
             final ByteBuffer buffer = PngSupport.loadIndexedPng(stream);
             final Drawable decoded = PngSupport.getDrawable(buffer, 0);
             if (decoded != null) {
@@ -146,11 +141,6 @@ public class PngImageView extends ImageView {
         }
 
         super.setImageResource(resId);
-    }
-
-    @Override
-    public void setImageTintList(ColorStateList tint) {
-        super.setImageTintList(tint);
     }
 
     private static boolean isSupported(String filename) {
