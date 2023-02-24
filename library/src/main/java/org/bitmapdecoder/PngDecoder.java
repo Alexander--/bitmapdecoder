@@ -28,8 +28,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * An interface for accessing decoder, internally used by the library
  * (currently implemented as small JNI wrapper, based on Wuffs Project).
- * <p/>
- * This class is made public in spirit of providing useful access to library internals,
+ *
+ * <p>This class is made public in spirit of providing useful access to library internals,
  * but it is probably not what most people will want to use.
  *
  * @see PngSupport

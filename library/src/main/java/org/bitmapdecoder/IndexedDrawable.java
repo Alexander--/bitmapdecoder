@@ -36,7 +36,42 @@ import static android.util.TypedValue.TYPE_ATTRIBUTE;
 import static android.util.TypedValue.TYPE_NULL;
 
 /**
- * A subclass of {@link ShaderDrawable}, that can be used in XML
+ * A specialized Drawable, that stores 8-bit PNG images much more efficiently than BitmapDrawable.
+ *
+ * <p>For each 8-bit PNG image with indexed color create an XML file like this in your {@code res/drawable/} directory:
+ *
+ * <pre>
+ *
+ * &lt;drawable
+ *   class="org.bitmapdecoder.IndexedDrawable"
+ *   android:src="@drawable/indexed_png_image"
+ *   android:tint="?attr/icon_color"
+ * /&gt;</pre>
+ *
+ * <p>"Indexed" stands for indexed color: PNG images with palette (color type 0 in PNG specification) internally
+ * store each pixel as 1 byte, referring to index in array with 256 colors. Android builtin PNG decoders discard the
+ * palette and convert such images to true color (ARGB_8888) Bitmap, using 4 times as much memory for each pixel.
+ *
+ * <p>IndexedDrawable uses {@link PaletteShader} and 2 Bitmaps: ARGB palette and ALPHA_8 pixel Bitmap to keep original
+ * data from PNG format, for total of 1 byte per pixel + 1024 bytes of fixed overhead for palette. This means,
+ * that IndexedDrawable takes roughly 1/2 of memory used by identical BitmapDrawable with {@code HARDWARE} Config
+ * and 1/4 of memory when compared to {@code ARGB_8888} BitmapDrawable.
+ *
+ * <p>IndexedDrawable supports tiling, tinting, density scaling and configuration-aware caching.
+ *
+ * <p>Unlike BitmapDrawable, this class has hardcoded gravity behavior: it always positions itself at the top left
+ * of container and, depending on tiling setting, either repeats/mirrors in both directions, or scales up to fill all
+ * available space without changing ratio of sides.
+ *
+ * <p>This class does not support mipmaps and always performs nearest neighbor filtering (may cause pixelation!)
+ * regardless of Paint settings.
+ *
+ * <p>Note, that despite it's name this class is able to handle non-indexed and non-PNG images just fine. However, it
+ * will fall back to using {@link BitmapFactory} and {@link BitmapShader} for such images, resulting in no memory gains
+ * compared to BitmapDrawable. Only 8-bit colormap (color type 0) and 8/16-bit greyscale (color type 4) PNGs will be
+ * decoded to the more efficient representation.
+ *
+ * @see <a href="http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html">PNG specification</a>
  */
 public class IndexedDrawable extends ShaderDrawable {
     private static final State EMPTY_STATE = new State(new Paint(), -1, -1, false);

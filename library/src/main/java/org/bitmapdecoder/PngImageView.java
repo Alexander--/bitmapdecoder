@@ -34,14 +34,15 @@ import java.nio.ByteBuffer;
  * An implementation of ImageView, that attempts to decode its {@code app:src} attribute as indexed ShaderDrawable
  * with fallback to usual routine if that's not feasible.
  *
- * <p>
- * This class will not try to use indexed images under following circumstances:
+ * <p>This class will not try to use indexed images under following circumstances:
  *
  * <ul>
- * <li>for SDK versions below 33</li>
  * <li>when attached to window without hardware acceleration</li>
- * <li>for 9-path drawables</li>
+ * <li>when set up with XML or 9-path drawables</li>
  * </ul>
+ *
+ * In addition, PngImageView will fall back to ordinary Drawables if the supplied drawable does not belong to one of
+ * supported formats.
  */
 public class PngImageView extends ImageView {
     private static final String TAG = "pngs";
