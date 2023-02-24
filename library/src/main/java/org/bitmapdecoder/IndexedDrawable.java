@@ -32,6 +32,9 @@ import org.xmlpull.v1.XmlPullParserException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import static android.util.TypedValue.TYPE_ATTRIBUTE;
+import static android.util.TypedValue.TYPE_NULL;
+
 /**
  * A subclass of {@link ShaderDrawable}, that can be used in XML
  */
@@ -143,8 +146,8 @@ public class IndexedDrawable extends ShaderDrawable {
                     ColorStateList tintList;
 
                     switch (resType) {
-                        case TypedValue.TYPE_ATTRIBUTE:
-                        case TypedValue.TYPE_NULL:
+                        case TYPE_ATTRIBUTE:
+                        case TYPE_NULL:
                             tintList = null;
                             break;
                         default:
@@ -153,7 +156,7 @@ public class IndexedDrawable extends ShaderDrawable {
 
                     int attributeConfigurations = typedArray.getChangingConfigurations();
 
-                    if (tint != 0 || resType == TypedValue.TYPE_ATTRIBUTE || attributeConfigurations != 0 || tiled) {
+                    if (tint != 0 || resType == TYPE_ATTRIBUTE || scale != 1.0 || attributeConfigurations != 0 || tiled) {
                         state = new IndexedDrawableState(state, tintList, tint, attributeConfigurations, scale, tiled);
 
                         if (tintList != null) {
@@ -327,7 +330,9 @@ public class IndexedDrawable extends ShaderDrawable {
     }
 
     private boolean decodeFallback(Resources r, TypedValue tv, int tileMode) {
-        final Bitmap bitmap = BitmapFactory.decodeResource(r, tv.resourceId);
+        final BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inScaled = false;
+        final Bitmap bitmap = BitmapFactory.decodeResource(r, tv.resourceId, options);
         if (bitmap == null) {
             return false;
         }
