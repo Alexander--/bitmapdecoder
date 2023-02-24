@@ -208,9 +208,15 @@ public final class PngSupport {
         return typedArray.getClass().getName().contains("BridgeTypedArray");
     }
 
-    @SuppressWarnings("deprecation")
     static ColorStateList toColor(Resources.Theme theme, TypedValue typedValue) {
-        Resources resources = theme.getResources();
+        return toColor(theme.getResources(), theme, typedValue);
+    }
+
+    @SuppressWarnings("deprecation")
+    static ColorStateList toColor(Resources resources, Resources.Theme theme, TypedValue typedValue) {
+        if (typedValue.type >= TypedValue.TYPE_FIRST_COLOR_INT && typedValue.type <= TypedValue.TYPE_LAST_COLOR_INT) {
+            return ColorStateList.valueOf(typedValue.data);
+        }
 
         if (Build.VERSION.SDK_INT >= 23) {
             return resources.getColorStateList(typedValue.resourceId, theme);

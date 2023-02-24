@@ -73,17 +73,12 @@ public class IndexedDrawable extends ShaderDrawable {
 
     @Override
     public boolean canApplyTheme() {
-        if (!(state instanceof IndexedDrawableState)) {
-            return false;
-        }
-        IndexedDrawableState state = (IndexedDrawableState) this.state;
-        return state.tintResId != 0 && state.tint == null;
+        return state.canApplyTheme();
     }
 
     @Override
     public void applyTheme(@NonNull Resources.Theme theme) {
         TypedValue tv = new TypedValue();
-
         if (theme.resolveAttribute(getTintResId(), tv, true)) {
             ColorStateList tintList = PngSupport.toColor(theme, tv);
             if (tintList != null) {
@@ -123,8 +118,12 @@ public class IndexedDrawable extends ShaderDrawable {
                 tiled = true;
             }
 
-            TypedValue tv = typedArray.peekValue(R.styleable.IndexedDrawable_android_src);
-            if (tv != null) {
+            final int resourceId = typedArray.getResourceId(R.styleable.IndexedDrawable_android_src, 0);
+            if (resourceId != 0) {
+                final DisplayMetrics displayMetrics = r.getDisplayMetrics();
+                final TypedValue tv = new TypedValue();
+                r.getValueForDensity(resourceId, displayMetrics.densityDpi, tv, true);
+
                 final boolean decoded = PngSupport.isPreview(typedArray)
                         ? decodePreview(r, tv, tileMode)
                         : decode(r, tv, tileMode);
@@ -151,7 +150,7 @@ public class IndexedDrawable extends ShaderDrawable {
                             tintList = null;
                             break;
                         default:
-                            tintList = typedArray.getColorStateList(R.styleable.IndexedDrawable_android_tint);
+                            tintList = PngSupport.toColor(r, theme, tv);
                     }
 
                     int attributeConfigurations = typedArray.getChangingConfigurations();
@@ -386,18 +385,9 @@ public class IndexedDrawable extends ShaderDrawable {
             return new IndexedDrawable(this);
         }
 
-        @NonNull
         @Override
-        public Drawable newDrawable(@Nullable Resources res, @Nullable Resources.Theme theme) {
-            ColorStateList tint = this.tint;
-            if (Build.VERSION.SDK_INT >= 23 && res != null && theme != null && tintResId != 0) {
-                tint = res.getColorStateList(tintResId, theme);
-            }
-            if (tint == this.tint) {
-                return new IndexedDrawable(this);
-            }
-            State s = new IndexedDrawableState(this, tint, tintResId, configurations, scale, tiled);
-            return new IndexedDrawable(s);
+        public boolean canApplyTheme() {
+            return tintResId != 0 && tint == null;
         }
 
         @Override
