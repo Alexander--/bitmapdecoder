@@ -165,6 +165,10 @@ public class ShaderDrawable extends Drawable {
         return this;
     }
 
+    public void clearMutated() {
+        mutated = false;
+    }
+
     protected static class State extends Drawable.ConstantState {
         protected final Paint paint;
         protected final int width, height;
