@@ -150,10 +150,14 @@ public final class PngDecoder {
         output.setPremultiplied(false);
 
         final ByteBuffer wrapped = ByteBuffer.wrap(palette);
-        final int count = getPaletteSize(wrapped);
+        final int count = ceilingPowerOf2(getPaletteSize(wrapped));
         wrapped.limit(count * 4);
 
         return new DecodingResult(output, wrapped, returnCode);
+    }
+
+    private static int ceilingPowerOf2(int x) {
+        return 1 << -Integer.numberOfLeadingZeros(x - 1);
     }
 
     public static final class DecodingResult {
