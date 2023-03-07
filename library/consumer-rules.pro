@@ -5,3 +5,6 @@
 -keepclassmembernames class org.bitmapdecoder.* {
     native <methods>;
 }
+-keepclassmembers class org.bitmapdecoder.ShaderDrawable {
+    public void clearMutated();
+}
