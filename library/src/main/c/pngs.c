@@ -34,7 +34,7 @@
 
 #define LOG(str, ...) (__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, str, __VA_ARGS__))
 
-#define OPTION_DECODE_AS_MASK 0x1
+#define OPTION_DECODE_AS_MASK 0x4
 
 #define FLAG_U8_MASK 0x2
 #define FLAG_GREY 0x4

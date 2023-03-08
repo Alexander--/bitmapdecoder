@@ -34,6 +34,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 
+import static org.bitmapdecoder.PngDecoder.OPTION_DECODE_AS_MASK;
+
 public final class PngSupport {
     private static final String TAG = "pngs";
 
@@ -48,7 +50,7 @@ public final class PngSupport {
     public static final int FLAG_TILED    = 0b001;
     public static final int FLAG_MIRRORED = 0b010;
 
-    @IntDef(value = { FLAG_TILED, FLAG_MIRRORED }, flag = true)
+    @IntDef(value = { FLAG_TILED, FLAG_MIRRORED, OPTION_DECODE_AS_MASK }, flag = true)
     @Retention(RetentionPolicy.SOURCE)
     public static @interface Options {
     }
@@ -81,7 +83,7 @@ public final class PngSupport {
     private static Paint createPaint(ByteBuffer source, PngHeaderInfo headerInfo, @Options int options) {
         final Bitmap rawImageBitmap = Bitmap.createBitmap(headerInfo.width, headerInfo.height, Bitmap.Config.ALPHA_8);
 
-        final DecodingResult result = PngDecoder.decodeIndexed(source, rawImageBitmap, PngDecoder.DEFAULT_DECODER_FLAGS);
+        final DecodingResult result = PngDecoder.decodeIndexed(source, rawImageBitmap, options | PngDecoder.DEFAULT_DECODER_FLAGS);
         if (result == null) {
             return null;
         }
@@ -91,7 +93,7 @@ public final class PngSupport {
     private static Drawable createDrawable(ByteBuffer source, PngHeaderInfo headerInfo, @Options int options) {
         final Bitmap rawImageBitmap = Bitmap.createBitmap(headerInfo.width, headerInfo.height, Bitmap.Config.ALPHA_8);
 
-        final DecodingResult result = PngDecoder.decodeIndexed(source, rawImageBitmap, PngDecoder.DEFAULT_DECODER_FLAGS);
+        final DecodingResult result = PngDecoder.decodeIndexed(source, rawImageBitmap, options | PngDecoder.DEFAULT_DECODER_FLAGS);
         if (result == null) {
             return null;
         }

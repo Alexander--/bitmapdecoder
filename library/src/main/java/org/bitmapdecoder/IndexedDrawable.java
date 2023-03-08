@@ -21,10 +21,7 @@ import android.graphics.Bitmap.Config;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
-import android.util.AttributeSet;
-import android.util.DisplayMetrics;
-import android.util.StateSet;
-import android.util.TypedValue;
+import android.util.*;
 import androidx.annotation.*;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -77,6 +74,8 @@ public class IndexedDrawable extends ShaderDrawable {
     private static final State EMPTY_STATE = new State(new Paint(), -1, -1, false);
 
     private static final String TAG = "pngs";
+
+    private static final int MASK_USAGE_THRESHOLD = 48 * 48;
 
     private static final int DISABLE_TILING = 0xffffffff;
 
@@ -336,9 +335,9 @@ public class IndexedDrawable extends ShaderDrawable {
 
     private boolean decode(ByteBuffer buffer, PngDecoder.PngHeaderInfo headerInfo, int tileMode) {
         final Bitmap imageBitmap = Bitmap.createBitmap(headerInfo.width, headerInfo.height, Config.ALPHA_8);
-        final int decoderFlags = PngDecoder.DEFAULT_DECODER_FLAGS;
+        final int decoderFlags = getFlags(headerInfo);
         final PngDecoder.DecodingResult result = PngDecoder.decodeIndexed(buffer, imageBitmap, decoderFlags);
-        final Paint paint = result == null ? null : PngSupport.createPaint(result, imageBitmap, tileMode);
+        final Paint paint = result == null ? null : PngSupport.createPaint(result, imageBitmap, decoderFlags | tileMode);
         if (paint != null) {
             state = new State(paint, headerInfo.width, headerInfo.height, result.isOpaque());
             return true;
@@ -346,6 +345,14 @@ public class IndexedDrawable extends ShaderDrawable {
         // fall back to ARGB_8888 Bitmap
         imageBitmap.recycle();
         return false;
+    }
+
+    private static int getFlags(PngDecoder.PngHeaderInfo image) {
+        if (image.width * image.height <= MASK_USAGE_THRESHOLD) {
+            return PngDecoder.OPTION_DECODE_AS_MASK;
+        } else {
+            return PngDecoder.DEFAULT_DECODER_FLAGS;
+        }
     }
 
     private static Shader.TileMode toTileMode(int tileMode) {
