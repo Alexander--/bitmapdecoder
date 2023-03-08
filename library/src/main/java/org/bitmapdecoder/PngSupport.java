@@ -259,10 +259,18 @@ public final class PngSupport {
         return new BitmapShader(bm, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
     }
 
-    private static int color(byte[] palette) {
-        int b = palette[0] & 0xFF;
-        int g = palette[1] & 0xFF;
-        int r = palette[2] & 0xFF;
+    // TODO test it
+    static @ColorInt int color(byte[] palette) {
+        int i;
+        for (i = 0; i < palette.length; i += 4) {
+            if (palette[i + 3] != 0) {
+                break;
+            }
+        }
+
+        int r = palette[i] & 0xFF;
+        int g = palette[i + 1] & 0xFF;
+        int b = palette[i + 2] & 0xFF;
 
         return 0xff000000 | (r << 16) | (g << 8) | b;
     }
