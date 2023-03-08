@@ -190,7 +190,7 @@ public class IndexedDrawable extends ShaderDrawable {
 
                     int attributeConfigurations = typedArray.getChangingConfigurations();
 
-                    if (tint != 0 || resType == TYPE_ATTRIBUTE || scale != 1.0 || attributeConfigurations != 0 || tiled) {
+                    if (tintList != null || resType == TYPE_ATTRIBUTE || scale != 1.0 || attributeConfigurations != 0 || tiled) {
                         state = new IndexedDrawableState(state, tintList, tint, attributeConfigurations, scale, tiled);
 
                         if (tintList != null) {
