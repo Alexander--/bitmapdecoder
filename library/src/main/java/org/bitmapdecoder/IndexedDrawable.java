@@ -120,7 +120,7 @@ public class IndexedDrawable extends ShaderDrawable {
                 int newConfiguration = state.getChangingConfigurations() | tv.changingConfigurations;
 
                 state = new IndexedDrawableState(state, tintList, tv.resourceId, newConfiguration,
-                        state.getScale(), state.isTiled());
+                        state.getScale(), state.flags);
 
                 applyTint(StateSet.NOTHING, getState(), tintList, true);
             }
@@ -191,7 +191,12 @@ public class IndexedDrawable extends ShaderDrawable {
                     int attributeConfigurations = typedArray.getChangingConfigurations();
 
                     if (tintList != null || resType == TYPE_ATTRIBUTE || scale != 1.0 || attributeConfigurations != 0 || tiled) {
-                        state = new IndexedDrawableState(state, tintList, tint, attributeConfigurations, scale, tiled);
+                        int flags = state.flags;
+                        if (tiled) {
+                            flags |= ShaderDrawable.TILED_MASK;
+                        }
+
+                        state = new IndexedDrawableState(state, tintList, tint, attributeConfigurations, scale, flags);
 
                         if (tintList != null) {
                             applyTint(StateSet.NOTHING, getState(), tintList, true);
@@ -211,7 +216,7 @@ public class IndexedDrawable extends ShaderDrawable {
     @Override
     public void setTintList(@Nullable ColorStateList tint) {
         this.state = new IndexedDrawableState(state, tint, 0, state.getChangingConfigurations(),
-                state.getScale(), state.isTiled());
+                state.getScale(), state.flags);
 
         applyTint(getState(), getState(), tint, true);
     }
@@ -309,7 +314,7 @@ public class IndexedDrawable extends ShaderDrawable {
         float scale = applyDensity(r.getDisplayMetrics(), tv.density);
         if (scale != 1.0) {
             state = new IndexedDrawableState(state, getTint(), getTintResId(), state.getChangingConfigurations(),
-                    scale, state.isTiled());
+                    scale, state.flags);
         }
     }
 
@@ -395,7 +400,6 @@ public class IndexedDrawable extends ShaderDrawable {
 
         private final int configurations;
         private final float scale;
-        private final boolean tiled;
 
         private IndexedDrawableState(@NonNull Paint paint,
                                      @NonNull State state,
@@ -403,13 +407,12 @@ public class IndexedDrawable extends ShaderDrawable {
                                      int tintResId,
                                      int configurations,
                                      float scale,
-                                     boolean tiled) {
-            super(paint, state.width, state.height, state.flags);
+                                     int newFlags) {
+            super(paint, state.width, state.height, newFlags);
 
             this.tint = tint;
             this.tintResId = tintResId;
             this.scale = scale;
-            this.tiled = tiled;
             this.configurations = configurations | getConfigurations(tint);
         }
 
@@ -418,8 +421,8 @@ public class IndexedDrawable extends ShaderDrawable {
                                      int tintResId,
                                      int configurations,
                                      float scale,
-                                     boolean tiled) {
-            this(state.paint, state, tint, tintResId, configurations, scale, tiled);
+                                     int newFlags) {
+            this(state.paint, state, tint, tintResId, configurations, scale, newFlags);
         }
 
         @NonNull
@@ -435,17 +438,12 @@ public class IndexedDrawable extends ShaderDrawable {
 
         @Override
         protected State copy() {
-            return new IndexedDrawableState(new Paint(paint), this, tint, tintResId, configurations, scale, tiled);
+            return new IndexedDrawableState(new Paint(paint), this, tint, tintResId, configurations, scale, flags);
         }
 
         @Override
         public int getChangingConfigurations() {
             return configurations;
-        }
-
-        @Override
-        protected boolean isTiled() {
-            return tiled;
         }
 
         @Override

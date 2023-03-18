@@ -38,8 +38,9 @@ import static org.bitmapdecoder.PngSupport.makeStateSpec;
 public class ShaderDrawable extends Drawable {
     private static final String TAG = "pngs";
 
-    static final int OPAQUE_MASK = 0xF0000000;
-    static final int COLOR_MASK  = 0x00FFFFFF;
+    static final int OPAQUE_MASK = 0b11110000000000000000000000000000;
+    static final int TILED_MASK  = 0b00001000000000000000000000000000;
+    static final int COLOR_MASK  = 0b00000000111111111111111111111111;
 
     protected State state;
     private boolean mutated;
@@ -236,7 +237,7 @@ public class ShaderDrawable extends Drawable {
         }
 
         protected boolean isTiled() {
-            return false;
+            return (flags & TILED_MASK) != 0;
         }
 
         protected float getScale() {
