@@ -243,7 +243,7 @@ public class IndexedDrawable extends ShaderDrawable {
 
     private boolean applyTint(int[] oldState, int[] currentState, ColorStateList stateList, boolean force) {
         if (stateList == null) {
-            setColorFilter(null);
+            clearTint();
             return true;
         }
 

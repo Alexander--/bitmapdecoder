@@ -137,7 +137,7 @@ public class ShaderDrawable extends Drawable {
     @Override
     public void setTintList(@Nullable ColorStateList tint) {
         if (tint == null) {
-            setColorFilter(null);
+            clearTint();
             return;
         }
 
@@ -152,6 +152,10 @@ public class ShaderDrawable extends Drawable {
         }
 
         setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
+    }
+
+    protected void clearTint() {
+        setColorFilter(null);
     }
 
     @NonNull
