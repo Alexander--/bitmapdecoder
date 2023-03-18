@@ -182,6 +182,10 @@ public final class PngDecoder {
         public boolean isOpaque() {
             return (flags & FLAG_OPAQUE) != 0;
         }
+
+        public int getPaletteSize() {
+            return palette.limit() / 4;
+        }
     }
 
     public static final class PngHeaderInfo {
