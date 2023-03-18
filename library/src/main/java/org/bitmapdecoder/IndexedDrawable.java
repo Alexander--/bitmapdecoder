@@ -15,6 +15,7 @@
  */
 package org.bitmapdecoder;
 
+import android.annotation.TargetApi;
 import android.content.res.*;
 import android.graphics.*;
 import android.graphics.Bitmap.Config;
@@ -113,20 +114,42 @@ public class IndexedDrawable extends ShaderDrawable {
 
     @Override
     public void applyTheme(@NonNull Resources.Theme theme) {
+        ColorStateList currentTint = getTint();
+        if (currentTint != null) {
+            inflateTintResource(theme, getTintResId());
+        } else {
+            resolveTintAttribute(theme, getTintResId());
+        }
+
+        super.applyTheme(theme);
+    }
+
+    private void resolveTintAttribute(Resources.Theme theme, int attributeId) {
         TypedValue tv = new TypedValue();
-        if (theme.resolveAttribute(getTintResId(), tv, true)) {
+
+        if (theme.resolveAttribute(attributeId, tv, true)) {
             ColorStateList tintList = PngSupport.toColor(theme, tv);
             if (tintList != null) {
                 int newConfiguration = state.getChangingConfigurations() | tv.changingConfigurations;
 
                 state = new IndexedDrawableState(state, tintList, tv.resourceId, newConfiguration,
-                        state.getScale(), state.flags);
+                        state.getScale(), state.flags & ~ShaderDrawable.CAN_THEME_MASK);
 
                 applyTint(StateSet.NOTHING, getState(), tintList, true);
             }
         }
+    }
 
-        super.applyTheme(theme);
+    @TargetApi(23)
+    private void inflateTintResource(Resources.Theme theme, int resourceId) {
+        Resources resources = theme.getResources();
+
+        ColorStateList tintList = resources.getColorStateList(resourceId, theme);
+
+        state = new IndexedDrawableState(state, tintList, resourceId, state.getChangingConfigurations(),
+                state.getScale(), state.flags & ~ShaderDrawable.CAN_THEME_MASK);
+
+        applyTint(StateSet.NOTHING, getState(), tintList, true);
     }
 
     @Override
@@ -170,30 +193,40 @@ public class IndexedDrawable extends ShaderDrawable {
                     int resType;
 
                     if (typedArray.getValue(R.styleable.IndexedDrawable_android_tint, tv)) {
-                        tint = tv.data;
                         resType = tv.type;
                     } else {
-                        tint = 0;
                         resType = 0;
                     }
 
                     ColorStateList tintList;
+                    boolean canApplyTheme;
 
                     switch (resType) {
                         case TYPE_ATTRIBUTE:
-                        case TYPE_NULL:
+                            canApplyTheme = true;
                             tintList = null;
+                            tint = tv.data;
+                            break;
+                        case TYPE_NULL:
+                            canApplyTheme = false;
+                            tintList = null;
+                            tint = 0;
                             break;
                         default:
+                            canApplyTheme = theme == null && PngSupport.canApplyThemeToColor(tv);
                             tintList = PngSupport.toColor(r, theme, tv);
+                            tint = tv.resourceId;
                     }
 
                     int attributeConfigurations = typedArray.getChangingConfigurations();
 
-                    if (tintList != null || resType == TYPE_ATTRIBUTE || scale != 1.0 || attributeConfigurations != 0 || tiled) {
+                    if (tintList != null || scale != 1.0 || attributeConfigurations != 0 || tiled || canApplyTheme) {
                         int flags = state.flags;
                         if (tiled) {
                             flags |= ShaderDrawable.TILED_MASK;
+                        }
+                        if (canApplyTheme) {
+                            flags |= ShaderDrawable.CAN_THEME_MASK;
                         }
 
                         state = new IndexedDrawableState(state, tintList, tint, attributeConfigurations, scale, flags);
@@ -429,11 +462,6 @@ public class IndexedDrawable extends ShaderDrawable {
         @Override
         public IndexedDrawable newDrawable() {
             return new IndexedDrawable(this);
-        }
-
-        @Override
-        public boolean canApplyTheme() {
-            return tintResId != 0 && tint == null;
         }
 
         @Override

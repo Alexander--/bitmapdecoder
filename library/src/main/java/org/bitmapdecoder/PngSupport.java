@@ -245,6 +245,14 @@ public final class PngSupport {
         }
     }
 
+    static boolean canApplyThemeToColor(TypedValue typedValue) {
+        if (typedValue.type >= TypedValue.TYPE_FIRST_COLOR_INT && typedValue.type <= TypedValue.TYPE_LAST_COLOR_INT) {
+            return false;
+        }
+
+        return Build.VERSION.SDK_INT >= 23;
+    }
+
     private static volatile boolean noHwAlpha8;
 
     private static BitmapShader newImageShader(Bitmap rawImage, Shader.TileMode tileMode) {
