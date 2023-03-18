@@ -111,6 +111,17 @@ public final class PngSupport {
         }
     }
 
+    static int makeStateSpec(PngDecoder.DecodingResult result) {
+        if (result.isOpaque()) {
+            return ShaderDrawable.OPAQUE_MASK;
+        } else if (result.decodedAsMask()) {
+            int color = color(result.palette.array());
+            return color & ShaderDrawable.COLOR_MASK;
+        } else {
+            return 0;
+        }
+    }
+
     static Paint createPaint(@NonNull DecodingResult result, Bitmap rawImageBitmap, @Options int options) {
         final Paint paint = new Paint();
 

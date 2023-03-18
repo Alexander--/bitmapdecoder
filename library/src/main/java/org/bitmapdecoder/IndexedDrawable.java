@@ -340,7 +340,7 @@ public class IndexedDrawable extends ShaderDrawable {
         final PngDecoder.DecodingResult result = PngDecoder.decodeIndexed(buffer, imageBitmap, decoderFlags);
         final Paint paint = result == null ? null : PngSupport.createPaint(result, imageBitmap, decoderFlags | tileMode);
         if (paint != null) {
-            state = new State(paint, headerInfo.width, headerInfo.height, makeStateSpec(result.isOpaque()));
+            state = new State(paint, headerInfo.width, headerInfo.height, makeStateSpec(result));
             return true;
         }
         // fall back to ARGB_8888 Bitmap

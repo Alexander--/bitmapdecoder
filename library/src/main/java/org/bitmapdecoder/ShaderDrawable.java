@@ -39,6 +39,7 @@ public class ShaderDrawable extends Drawable {
     private static final String TAG = "pngs";
 
     static final int OPAQUE_MASK = 0xF0000000;
+    static final int COLOR_MASK  = 0x00FFFFFF;
 
     protected State state;
     private boolean mutated;
@@ -163,7 +164,11 @@ public class ShaderDrawable extends Drawable {
     }
 
     protected void clearTint() {
-        setColorFilter(null);
+        if (state.isMask()) {
+            setColorFilter(new PorterDuffColorFilter(state.tint(), PorterDuff.Mode.SRC_IN));
+        } else {
+            setColorFilter(null);
+        }
     }
 
     @NonNull
@@ -200,7 +205,15 @@ public class ShaderDrawable extends Drawable {
         }
 
         protected State(@NonNull Paint paint, int width, int height, PngDecoder.DecodingResult result) {
-            this(paint, width, height, result.isOpaque());
+            this(paint, width, height, makeStateSpec(result));
+        }
+
+        int tint() {
+            return (flags & COLOR_MASK) | 0xFF000000;
+        }
+
+        boolean isMask() {
+            return (flags & COLOR_MASK) != 0;
         }
 
         boolean isOpaque() {
