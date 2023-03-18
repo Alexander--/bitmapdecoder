@@ -31,6 +31,7 @@ import java.nio.ByteBuffer;
 
 import static android.util.TypedValue.TYPE_ATTRIBUTE;
 import static android.util.TypedValue.TYPE_NULL;
+import static org.bitmapdecoder.PngSupport.makeStateSpec;
 
 /**
  * A specialized Drawable, that stores 8-bit PNG images much more efficiently than BitmapDrawable.
@@ -71,7 +72,7 @@ import static android.util.TypedValue.TYPE_NULL;
  * @see <a href="http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html">PNG specification</a>
  */
 public class IndexedDrawable extends ShaderDrawable {
-    private static final State EMPTY_STATE = new State(new Paint(), -1, -1, false);
+    private static final State EMPTY_STATE = new State(new Paint(), -1, -1, 0);
 
     private static final String TAG = "pngs";
 
@@ -275,7 +276,7 @@ public class IndexedDrawable extends ShaderDrawable {
         int w = state.width;
         int h = state.height;
 
-        state = new State(state.paint, scale(w, sDensity, tDensity), scale(h, sDensity, tDensity), state.opaque);
+        state = new State(state.paint, scale(w, sDensity, tDensity), scale(h, sDensity, tDensity), state.flags);
 
         return state.width / (float) w;
     }
@@ -339,7 +340,7 @@ public class IndexedDrawable extends ShaderDrawable {
         final PngDecoder.DecodingResult result = PngDecoder.decodeIndexed(buffer, imageBitmap, decoderFlags);
         final Paint paint = result == null ? null : PngSupport.createPaint(result, imageBitmap, decoderFlags | tileMode);
         if (paint != null) {
-            state = new State(paint, headerInfo.width, headerInfo.height, result.isOpaque());
+            state = new State(paint, headerInfo.width, headerInfo.height, makeStateSpec(result.isOpaque()));
             return true;
         }
         // fall back to ARGB_8888 Bitmap
@@ -403,7 +404,7 @@ public class IndexedDrawable extends ShaderDrawable {
                                      int configurations,
                                      float scale,
                                      boolean tiled) {
-            super(paint, state.width, state.height, state.opaque);
+            super(paint, state.width, state.height, state.flags);
 
             this.tint = tint;
             this.tintResId = tintResId;

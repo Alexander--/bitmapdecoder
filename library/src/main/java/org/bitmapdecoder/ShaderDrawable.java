@@ -26,6 +26,8 @@ import androidx.annotation.Nullable;
 
 import java.util.Objects;
 
+import static org.bitmapdecoder.PngSupport.makeStateSpec;
+
 /**
  * A rudimentary Drawable, that implements bare minimum of features to render a {@link  PaletteShader}.
  * <br/>
@@ -35,6 +37,8 @@ import java.util.Objects;
  */
 public class ShaderDrawable extends Drawable {
     private static final String TAG = "pngs";
+
+    static final int OPAQUE_MASK = 0xF0000000;
 
     protected State state;
     private boolean mutated;
@@ -47,6 +51,10 @@ public class ShaderDrawable extends Drawable {
 
     public ShaderDrawable(@NonNull Paint paint, int width, int height, boolean opaque) {
         this(new State(paint, width, height, opaque));
+    }
+
+    protected ShaderDrawable(Paint paint, int width, int height, PngDecoder.DecodingResult result) {
+        this(new State(paint, width, height, result));
     }
 
     protected ShaderDrawable(@NonNull State state) {
@@ -96,8 +104,8 @@ public class ShaderDrawable extends Drawable {
     public void getOutline(@NonNull Outline outline) {
         super.getOutline(outline);
 
-        if (state.opaque) {
-            outline.setAlpha(getAlpha() / 255.0f);
+        if (state.isOpaque()) {
+            outline.setAlpha(1.0f);
         }
     }
 
@@ -175,21 +183,28 @@ public class ShaderDrawable extends Drawable {
 
     protected static class State extends Drawable.ConstantState {
         protected final Paint paint;
-        protected final int width, height;
-        protected final boolean opaque;
+        protected final int width, height, flags;
 
-        protected State(@NonNull Paint paint, int width, int height, boolean opaque) {
+        protected State(@NonNull Paint paint, int width, int height, int flags) {
             this.paint = paint;
             this.width = width;
             this.height = height;
-            this.opaque = opaque;
+            this.flags = flags;
 
             paint.setFilterBitmap(false);
             paint.setDither(false);
         }
 
+        protected State(@NonNull Paint paint, int width, int height, boolean opaque) {
+            this(paint, width, height, makeStateSpec(opaque));
+        }
+
+        protected State(@NonNull Paint paint, int width, int height, PngDecoder.DecodingResult result) {
+            this(paint, width, height, result.isOpaque());
+        }
+
         boolean isOpaque() {
-            return opaque && paint.getAlpha() == 255;
+            return (flags & OPAQUE_MASK) != 0 && paint.getAlpha() == 255;
         }
 
         @NonNull
@@ -199,7 +214,7 @@ public class ShaderDrawable extends Drawable {
         }
 
         protected State copy() {
-            return new State(new Paint(paint), width, height, opaque);
+            return new State(new Paint(paint), width, height, flags);
         }
 
         @Override

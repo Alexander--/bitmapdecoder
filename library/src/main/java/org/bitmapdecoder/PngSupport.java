@@ -20,8 +20,7 @@ import android.content.res.*;
 import android.graphics.*;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
-import android.util.Log;
-import android.util.TypedValue;
+import android.util.*;
 import androidx.annotation.*;
 import org.bitmapdecoder.PngDecoder.DecodingResult;
 import org.bitmapdecoder.PngDecoder.PngHeaderInfo;
@@ -101,7 +100,15 @@ public final class PngSupport {
         if (paint == null) {
             return null;
         }
-        return new ShaderDrawable(paint, headerInfo.width, headerInfo.height, result.isOpaque());
+        return new ShaderDrawable(paint, headerInfo.width, headerInfo.height, result);
+    }
+
+    static int makeStateSpec(boolean isOpaque) {
+        if (isOpaque) {
+            return ShaderDrawable.OPAQUE_MASK;
+        } else {
+            return 0;
+        }
     }
 
     static Paint createPaint(@NonNull DecodingResult result, Bitmap rawImageBitmap, @Options int options) {
