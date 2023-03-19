@@ -35,6 +35,7 @@
 #define LOG(str, ...) (__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, str, __VA_ARGS__))
 
 #define OPTION_DECODE_AS_MASK 0x4
+#define OPTION_EXTRACT_MASK 0x8
 
 #define FLAG_U8_MASK 0x2
 #define FLAG_GREY 0x4
@@ -70,6 +71,15 @@ static int copyPalette(const uint8_t *restrict dest, const uint8_t *restrict src
     }
 
     return is_opaque;
+}
+
+static void extract_mask(uint8_t *restrict dest, uint8_t *restrict src, uint32_t *restrict palette, size_t size) {
+    for (int i = 0; i < size; i++) {
+        uint8_t value = src[i];
+        uint32_t color = palette[value];
+        uint8_t alpha = (uint8_t) ((color >> 24) & 0xFF);
+        dest[i] = alpha;
+    }
 }
 
 static int convert_to_mask(uint8_t *restrict dest, uint8_t *restrict src, uint32_t *restrict palette, size_t size) {
@@ -267,7 +277,13 @@ allocate_buffer:
 
         // if we have an image where all visible palette entries have the same color
         // (different only be alpha value); this allows us to convert it to alpha mask!
-        if (!is_opaque && (options & OPTION_DECODE_AS_MASK) != 0 && convert_to_mask(buffer_mem, fullimage, palette, img_width * img_height)) {
+        // furthermore, if we know that the image is to be tinted, we can convert to mask
+        // regardless of palette!
+        if ((options & OPTION_EXTRACT_MASK) != 0) {
+            LOG("%s\n", "Forced mask conversion!!");
+            extract_mask(buffer_mem, fullimage, palette, img_width * img_height);
+            result |= FLAG_U8_MASK;
+        } else if (!is_opaque && (options & OPTION_DECODE_AS_MASK) != 0 && convert_to_mask(buffer_mem, fullimage, palette, img_width * img_height)) {
             result |= FLAG_U8_MASK;
         } else {
             memcpy(buffer_mem, fullimage, img_width * img_height);

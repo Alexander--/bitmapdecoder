@@ -43,6 +43,7 @@ public final class PngDecoder {
     }
 
     public static final int OPTION_DECODE_AS_MASK = 0b0100;
+    public static final int OPTION_EXTRACT_MASK   = 0b1000;
 
     public static final int FLAG_IS_INDEXED    = 0b00100;
     public static final int FLAG_IS_GREYSCALE  = 0b01000;

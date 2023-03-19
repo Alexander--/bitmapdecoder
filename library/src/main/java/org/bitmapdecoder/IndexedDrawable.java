@@ -24,6 +24,7 @@ import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.util.*;
 import androidx.annotation.*;
+import org.bitmapdecoder.PngSupport.Options;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -132,8 +133,14 @@ public class IndexedDrawable extends ShaderDrawable {
             if (tintList != null) {
                 int newConfiguration = state.getChangingConfigurations() | tv.changingConfigurations;
 
+                final int tintColor = tintList.getDefaultColor();
+
+                int newFlags = state.flags & ~ShaderDrawable.CAN_THEME_MASK;
+
+                newFlags |=  (tintColor & ShaderDrawable.COLOR_MASK);
+
                 state = new IndexedDrawableState(state, tintList, tv.resourceId, newConfiguration,
-                        state.getScale(), state.flags & ~ShaderDrawable.CAN_THEME_MASK);
+                        state.getScale(), newFlags);
 
                 applyTint(StateSet.NOTHING, getState(), tintList, true);
             }
@@ -146,8 +153,14 @@ public class IndexedDrawable extends ShaderDrawable {
 
         ColorStateList tintList = resources.getColorStateList(resourceId, theme);
 
+        final int tintColor = tintList.getDefaultColor();
+
+        int newFlags = state.flags & ~ShaderDrawable.CAN_THEME_MASK;
+
+        newFlags |=  (tintColor & ShaderDrawable.COLOR_MASK);
+
         state = new IndexedDrawableState(state, tintList, resourceId, state.getChangingConfigurations(),
-                state.getScale(), state.flags & ~ShaderDrawable.CAN_THEME_MASK);
+                state.getScale(), newFlags);
 
         applyTint(StateSet.NOTHING, getState(), tintList, true);
     }
@@ -176,47 +189,48 @@ public class IndexedDrawable extends ShaderDrawable {
                 tiled = true;
             }
 
+            final TypedValue tv = new TypedValue();
+
+            int tint;
+            int resType;
+
+            if (typedArray.getValue(R.styleable.IndexedDrawable_android_tint, tv)) {
+                resType = tv.type;
+            } else {
+                resType = 0;
+            }
+
+            ColorStateList tintList;
+            boolean canApplyTheme;
+
+            switch (resType) {
+                case TYPE_ATTRIBUTE:
+                    canApplyTheme = true;
+                    tintList = null;
+                    tint = tv.data;
+                    break;
+                case TYPE_NULL:
+                    canApplyTheme = false;
+                    tintList = null;
+                    tint = 0;
+                    break;
+                default:
+                    canApplyTheme = theme == null && PngSupport.canApplyThemeToColor(tv);
+                    tintList = PngSupport.toColor(r, theme, tv);
+                    tint = tv.resourceId;
+            }
+
             final int resourceId = typedArray.getResourceId(R.styleable.IndexedDrawable_android_src, 0);
             if (resourceId != 0) {
                 final DisplayMetrics displayMetrics = r.getDisplayMetrics();
-                final TypedValue tv = new TypedValue();
                 r.getValueForDensity(resourceId, displayMetrics.densityDpi, tv, true);
 
                 final boolean decoded = PngSupport.isPreview(typedArray)
                         ? decodePreview(r, tv, tileMode)
-                        : decode(r, tv, tileMode);
+                        : decode(r, tv, tileMode, tintList != null);
 
                 if (decoded) {
                     float scale = applyDensity(r.getDisplayMetrics(), tv.density);
-
-                    int tint;
-                    int resType;
-
-                    if (typedArray.getValue(R.styleable.IndexedDrawable_android_tint, tv)) {
-                        resType = tv.type;
-                    } else {
-                        resType = 0;
-                    }
-
-                    ColorStateList tintList;
-                    boolean canApplyTheme;
-
-                    switch (resType) {
-                        case TYPE_ATTRIBUTE:
-                            canApplyTheme = true;
-                            tintList = null;
-                            tint = tv.data;
-                            break;
-                        case TYPE_NULL:
-                            canApplyTheme = false;
-                            tintList = null;
-                            tint = 0;
-                            break;
-                        default:
-                            canApplyTheme = theme == null && PngSupport.canApplyThemeToColor(tv);
-                            tintList = PngSupport.toColor(r, theme, tv);
-                            tint = tv.resourceId;
-                    }
 
                     int attributeConfigurations = typedArray.getChangingConfigurations();
 
@@ -229,11 +243,15 @@ public class IndexedDrawable extends ShaderDrawable {
                             flags |= ShaderDrawable.CAN_THEME_MASK;
                         }
 
-                        state = new IndexedDrawableState(state, tintList, tint, attributeConfigurations, scale, flags);
-
                         if (tintList != null) {
                             applyTint(StateSet.NOTHING, getState(), tintList, true);
+
+                            final int tintColor = tintList.getDefaultColor();
+
+                            flags |=  (tintColor & ShaderDrawable.COLOR_MASK);
                         }
+
+                        state = new IndexedDrawableState(state, tintList, tint, attributeConfigurations, scale, flags);
                     }
 
                     return;
@@ -340,7 +358,7 @@ public class IndexedDrawable extends ShaderDrawable {
     }
 
     private void decode(Resources r, TypedValue tv) throws IOException {
-        if (!decode(r, tv, 0)) {
+        if (!decode(r, tv, 0, false)) {
             throw new IOException(PngSupport.ERROR_CODE_DECODING_FAILED);
         }
 
@@ -351,14 +369,21 @@ public class IndexedDrawable extends ShaderDrawable {
         }
     }
 
-    private boolean decode(Resources r, TypedValue tv, int tileMode) throws IOException {
+    private boolean decode(Resources r, TypedValue tv, int tileMode, boolean forceMask) throws IOException {
         final AssetManager am = r.getAssets();
 
         try (AssetFileDescriptor stream = am.openNonAssetFd(tv.assetCookie, tv.string.toString())) {
             final ByteBuffer buffer = PngSupport.loadIndexedPng(stream);
             final PngDecoder.PngHeaderInfo headerInfo = PngDecoder.getImageInfo(buffer);
-            if (headerInfo != null && headerInfo.isPaletteOrGreyscale() && decode(buffer, headerInfo, tileMode)) {
-                return true;
+            if (headerInfo != null && headerInfo.isPaletteOrGreyscale()) {
+                int decodingFlags = tileMode;
+                if (forceMask) {
+                    decodingFlags |= PngDecoder.OPTION_EXTRACT_MASK;
+                }
+
+                if (decode(buffer, headerInfo, decodingFlags)) {
+                    return true;
+                }
             }
             return decodeFallback(r, tv, tileMode);
         }
@@ -372,11 +397,11 @@ public class IndexedDrawable extends ShaderDrawable {
         return decode(buffer, headerInfo, 0);
     }
 
-    private boolean decode(ByteBuffer buffer, PngDecoder.PngHeaderInfo headerInfo, int tileMode) {
+    private boolean decode(ByteBuffer buffer, PngDecoder.PngHeaderInfo headerInfo, @Options int options) {
+        final int decoderFlags = getFlags(headerInfo) | options;
         final Bitmap imageBitmap = Bitmap.createBitmap(headerInfo.width, headerInfo.height, Config.ALPHA_8);
-        final int decoderFlags = getFlags(headerInfo);
         final PngDecoder.DecodingResult result = PngDecoder.decodeIndexed(buffer, imageBitmap, decoderFlags);
-        final Paint paint = result == null ? null : PngSupport.createPaint(result, imageBitmap, decoderFlags | tileMode);
+        final Paint paint = result == null ? null : PngSupport.createPaint(result, imageBitmap, decoderFlags);
         if (paint != null) {
             state = new State(paint, headerInfo.width, headerInfo.height, makeStateSpec(result));
             return true;

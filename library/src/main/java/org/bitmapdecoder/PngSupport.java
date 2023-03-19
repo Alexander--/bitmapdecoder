@@ -34,6 +34,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 
 import static org.bitmapdecoder.PngDecoder.OPTION_DECODE_AS_MASK;
+import static org.bitmapdecoder.PngDecoder.OPTION_EXTRACT_MASK;
 
 public final class PngSupport {
     private static final String TAG = "pngs";
@@ -49,7 +50,7 @@ public final class PngSupport {
     public static final int FLAG_TILED    = 0b001;
     public static final int FLAG_MIRRORED = 0b010;
 
-    @IntDef(value = { FLAG_TILED, FLAG_MIRRORED, OPTION_DECODE_AS_MASK }, flag = true)
+    @IntDef(value = { FLAG_TILED, FLAG_MIRRORED, OPTION_DECODE_AS_MASK, OPTION_EXTRACT_MASK }, flag = true)
     @Retention(RetentionPolicy.SOURCE)
     public static @interface Options {
     }
