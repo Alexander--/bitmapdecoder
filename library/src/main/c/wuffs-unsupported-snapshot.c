@@ -20754,7 +20754,7 @@ wuffs_base__pixel_swizzler__prepare__y(wuffs_base__pixel_swizzler* p,
   switch (dst_pixfmt.repr) {
     case WUFFS_BASE__PIXEL_FORMAT__Y:
       return wuffs_base__pixel_swizzler__copy_1_1;
-
+/*
     case WUFFS_BASE__PIXEL_FORMAT__BGR_565:
       return wuffs_base__pixel_swizzler__bgr_565__y;
 
@@ -20781,7 +20781,7 @@ wuffs_base__pixel_swizzler__prepare__y(wuffs_base__pixel_swizzler* p,
     case WUFFS_BASE__PIXEL_FORMAT__BGRA_PREMUL_4X16LE:
     case WUFFS_BASE__PIXEL_FORMAT__RGBA_NONPREMUL_4X16LE:
     case WUFFS_BASE__PIXEL_FORMAT__RGBA_PREMUL_4X16LE:
-      return wuffs_base__pixel_swizzler__xxxxxxxx__y;
+      return wuffs_base__pixel_swizzler__xxxxxxxx__y;*/
   }
   return NULL;
 }
@@ -20846,7 +20846,7 @@ wuffs_base__pixel_swizzler__prepare__indexed__bgra_nonpremul(
           return wuffs_base__pixel_swizzler__copy_1_1;
       }
       return NULL;
-
+/*
     case WUFFS_BASE__PIXEL_FORMAT__BGR_565:
       switch (blend) {
         case WUFFS_BASE__PIXEL_BLEND__SRC:
@@ -20972,7 +20972,7 @@ wuffs_base__pixel_swizzler__prepare__indexed__bgra_nonpremul(
 
     case WUFFS_BASE__PIXEL_FORMAT__RGBX:
       // TODO.
-      break;
+      break;*/
   }
   return NULL;
 }
@@ -20997,7 +20997,7 @@ wuffs_base__pixel_swizzler__prepare__indexed__bgra_binary(
           return wuffs_base__pixel_swizzler__copy_1_1;
       }
       return NULL;
-
+/*
     case WUFFS_BASE__PIXEL_FORMAT__BGR_565:
       if (wuffs_base__pixel_swizzler__squash_align4_bgr_565_8888(
               dst_palette.ptr, dst_palette.len, src_palette.ptr,
@@ -21085,7 +21085,7 @@ wuffs_base__pixel_swizzler__prepare__indexed__bgra_binary(
         case WUFFS_BASE__PIXEL_BLEND__SRC_OVER:
           return wuffs_base__pixel_swizzler__xxxx__index_binary_alpha__src_over;
       }
-      return NULL;
+      return NULL;*/
   }
   return NULL;
 }
@@ -21742,7 +21742,7 @@ wuffs_base__pixel_swizzler__prepare(wuffs_base__pixel_swizzler* p,
       func = wuffs_base__pixel_swizzler__prepare__indexed__bgra_binary(
           p, dst_pixfmt, dst_palette, src_palette, blend);
       break;
-
+/*
     case WUFFS_BASE__PIXEL_FORMAT__BGR_565:
       func = wuffs_base__pixel_swizzler__prepare__bgr_565(
           p, dst_pixfmt, dst_palette, src_palette, blend);
@@ -21786,7 +21786,7 @@ wuffs_base__pixel_swizzler__prepare(wuffs_base__pixel_swizzler* p,
     case WUFFS_BASE__PIXEL_FORMAT__RGBA_PREMUL:
       func = wuffs_base__pixel_swizzler__prepare__rgba_premul(
           p, dst_pixfmt, dst_palette, src_palette, blend);
-      break;
+      break;*/
   }
 
   p->private_impl.func = func;

@@ -17,9 +17,8 @@
 
 #define WUFFS_CONFIG__MODULES
 #define WUFFS_CONFIG__MODULE__ADLER32
-#define WUFFS_CONFIG__MODULE__AUX__BASE
-#define WUFFS_CONFIG__MODULE__AUX__IMAGE
-#define WUFFS_CONFIG__MODULE__BASE
+#define WUFFS_CONFIG__MODULE__BASE__CORE
+#define WUFFS_CONFIG__MODULE__BASE__PIXCONV
 #define WUFFS_CONFIG__MODULE__CRC32
 #define WUFFS_CONFIG__MODULE__DEFLATE
 #define WUFFS_CONFIG__MODULE__PNG
@@ -122,7 +121,7 @@ JNIEXPORT jint JNICALL Java_org_bitmapdecoder_PngDecoder_decode(
     wuffs_png__decoder decoder;
     wuffs_base__status i_status = wuffs_png__decoder__initialize(&decoder, sizeof decoder, WUFFS_VERSION, 0);
     if (!wuffs_base__status__is_ok(&i_status)) {
-        LOG("Failed to initialize PNG decoder: %s\n", wuffs_base__status__message(&i_status));
+        LOG("%s\n", wuffs_base__status__message(&i_status));
         return 0;
     }
 
@@ -142,7 +141,7 @@ JNIEXPORT jint JNICALL Java_org_bitmapdecoder_PngDecoder_decode(
     wuffs_base__image_config imageconfig;
     wuffs_base__status dic_status = wuffs_png__decoder__decode_image_config(&decoder, &imageconfig, &src);
     if (!wuffs_base__status__is_ok(&dic_status)) {
-        LOG("Header parsing failed: %s\n", wuffs_base__status__message(&dic_status));
+        LOG("%s\n", wuffs_base__status__message(&dic_status));
         return 0;
     }
 
@@ -185,16 +184,7 @@ JNIEXPORT jint JNICALL Java_org_bitmapdecoder_PngDecoder_decode(
 
         AndroidBitmap_lockPixels(env, out_image, &dst_buffer);
     } else if (out_palette == NULL) {
-        // decode as RGBA
-        //LOG("%s\n", "Decoding indexed as RGBA");
-
-        wuffs_base__pixel_config__set(
-             &imageconfig.pixcfg, WUFFS_BASE__PIXEL_FORMAT__RGBA_NONPREMUL,
-             WUFFS_BASE__PIXEL_SUBSAMPLING__NONE, img_width, img_height);
-
-        dst_len = img_width * img_height * 4;
-
-        AndroidBitmap_lockPixels(env, out_image, &dst_buffer);
+        return 0;
     } else {
         //LOG("%s\n", "Decoding indexed to ALPHA8 with palette");
 
@@ -217,7 +207,7 @@ allocate_buffer:
     wuffs_base__status newbuffer_status = wuffs_base__pixel_buffer__set_from_slice(&pb, &imageconfig.pixcfg, dstbuff);
 
     if (!wuffs_base__status__is_ok(&newbuffer_status)) {
-        LOG("Failed to initialize pixel buffer: %s\n", wuffs_base__status__message(&newbuffer_status));
+        LOG("%s\n", wuffs_base__status__message(&newbuffer_status));
         return 0;
     }
 
@@ -232,7 +222,7 @@ allocate_buffer:
 
     wuffs_base__status framestatus = wuffs_png__decoder__decode_frame(&decoder, &pb, &src, WUFFS_BASE__PIXEL_BLEND__SRC, workbuff, NULL);
     if (!wuffs_base__status__is_ok(&framestatus)) {
-        LOG("Failed to decode image: %s\n", wuffs_base__status__message(&framestatus));
+        LOG("Decoding failed: %s\n", wuffs_base__status__message(&framestatus));
         return 0;
     }
 
